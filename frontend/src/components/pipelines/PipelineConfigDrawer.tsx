@@ -38,7 +38,6 @@ import {
     Code,
     Activity,
     Database,
-    ChevronRight,
     Pause,
     Plus,
     Trash2,
@@ -122,8 +121,6 @@ export function PipelineConfigDrawer({
     const isActive = pipeline.status === "active";
     const webhookEndpoint = `https://api.cartnudge.ai/v1/events/${pipeline.id}`;
     const apiKey = "sk_live_xxxxxxxxxxxxxxxx";
-
-    const enabledEvents = events.filter((e) => e.enabled).length;
 
     const handleCopy = async (text: string, type: string) => {
         await navigator.clipboard.writeText(text);

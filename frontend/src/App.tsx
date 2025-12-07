@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 // Page imports
 import UserModeling from "./pages/UserModeling";
 import FeaturePipelines from "./pages/FeaturePipelines";
+import FeatureStore from "./pages/FeatureStore";
 import NewPipeline from "./pages/pipelines/NewPipeline";
 import PipelineDetails from "./pages/pipelines/PipelineDetails";
 import Deployments from "./pages/Deployments";
@@ -21,6 +22,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/user-modeling" element={<UserModeling />} />
           <Route path="/feature-pipelines" element={<FeaturePipelines />} />
+          <Route path="/feature-store" element={<FeatureStore />} />
           <Route path="/pipelines/new" element={<NewPipeline />} />
           <Route path="/pipelines/:id" element={<PipelineDetails />} />
           <Route path="/deployments" element={<Deployments />} />
