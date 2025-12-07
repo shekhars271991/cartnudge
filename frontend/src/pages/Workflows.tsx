@@ -927,6 +927,7 @@ export default function Workflows() {
                             onPaneClick={onPaneClick}
                             nodeTypes={nodeTypes}
                             fitView
+                            fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
                             className="bg-slate-50"
                         >
                             <Controls />
@@ -1021,6 +1022,7 @@ export default function Workflows() {
                             onPaneClick={onPaneClick}
                             nodeTypes={nodeTypes}
                             fitView
+                            fitViewOptions={{ maxZoom: 0.85, padding: 0.2 }}
                             className="bg-slate-50"
                         >
                             <Controls />
