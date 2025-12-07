@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import {
     LayoutDashboard,
     Users,
+    Plug,
+    Database,
     BrainCircuit,
     Workflow,
     Radio,
@@ -14,12 +16,19 @@ import ProjectSwitcher from "./ProjectSwitcher";
 export function Sidebar() {
     const location = useLocation();
 
-    const links = [
-        { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    const dataLinks = [
         { href: "/user-modeling", label: "User Modeling", icon: Users },
+        { href: "/feature-pipelines", label: "Feature Pipelines", icon: Plug },
+        { href: "/feature-store", label: "Feature Store", icon: Database },
+    ];
+
+    const aiLinks = [
         { href: "/models", label: "Prediction Models", icon: BrainCircuit },
         { href: "/workflows", label: "Nudge Workflows", icon: Workflow },
         { href: "/channels", label: "Output Channels", icon: Radio },
+    ];
+
+    const otherLinks = [
         { href: "/settings", label: "Settings", icon: Settings },
     ];
 
@@ -45,36 +54,140 @@ export function Sidebar() {
 
             {/* Navigation */}
             <div className="flex-1 overflow-y-auto sidebar-scroll py-2">
-                <nav className="space-y-1 px-3">
-                    {links.map((item) => {
-                        const isActive = location.pathname === item.href || 
-                            (item.href !== "/" && location.pathname.startsWith(item.href));
-                        return (
-                            <Link
-                                key={item.label}
-                                to={item.href}
-                                className={cn(
-                                    "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-sidebar",
-                                    isActive
-                                        ? "bg-[hsl(217,33%,12%)] text-white"
-                                        : "text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,10%)] hover:text-white"
-                                )}
-                            >
-                                <div className={cn(
-                                    "mr-3 flex h-8 w-8 items-center justify-center rounded-md transition-sidebar",
-                                    isActive 
-                                        ? "bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400" 
-                                        : "text-[hsl(215,20%,55%)] group-hover:text-white"
-                                )}>
-                                    <item.icon className="h-[18px] w-[18px]" />
-                                </div>
-                                <span className="flex-1">{item.label}</span>
-                                {isActive && (
-                                    <ChevronRight className="h-4 w-4 text-cyan-400 opacity-60" />
-                                )}
-                            </Link>
-                        );
-                    })}
+                <nav className="px-3 space-y-6">
+                    {/* Dashboard */}
+                    <div>
+                        <Link
+                            to="/"
+                            className={cn(
+                                "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-sidebar",
+                                location.pathname === "/"
+                                    ? "bg-[hsl(217,33%,12%)] text-white"
+                                    : "text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,10%)] hover:text-white"
+                            )}
+                        >
+                            <div className={cn(
+                                "mr-3 flex h-8 w-8 items-center justify-center rounded-md transition-sidebar",
+                                location.pathname === "/"
+                                    ? "bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400" 
+                                    : "text-[hsl(215,20%,55%)] group-hover:text-white"
+                            )}>
+                                <LayoutDashboard className="h-[18px] w-[18px]" />
+                            </div>
+                            <span className="flex-1">Dashboard</span>
+                            {location.pathname === "/" && (
+                                <ChevronRight className="h-4 w-4 text-cyan-400 opacity-60" />
+                            )}
+                        </Link>
+                    </div>
+
+                    {/* Data Platform Section */}
+                    <div>
+                        <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-[hsl(215,20%,40%)]">
+                            Data Platform
+                        </p>
+                        <div className="space-y-1">
+                            {dataLinks.map((item) => {
+                                const isActive = location.pathname === item.href || 
+                                    (item.href !== "/" && location.pathname.startsWith(item.href));
+                                return (
+                                    <Link
+                                        key={item.label}
+                                        to={item.href}
+                                        className={cn(
+                                            "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-sidebar",
+                                            isActive
+                                                ? "bg-[hsl(217,33%,12%)] text-white"
+                                                : "text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,10%)] hover:text-white"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "mr-3 flex h-8 w-8 items-center justify-center rounded-md transition-sidebar",
+                                            isActive 
+                                                ? "bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400" 
+                                                : "text-[hsl(215,20%,55%)] group-hover:text-white"
+                                        )}>
+                                            <item.icon className="h-[18px] w-[18px]" />
+                                        </div>
+                                        <span className="flex-1">{item.label}</span>
+                                        {isActive && (
+                                            <ChevronRight className="h-4 w-4 text-cyan-400 opacity-60" />
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* AI & Automation Section */}
+                    <div>
+                        <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-[hsl(215,20%,40%)]">
+                            AI & Automation
+                        </p>
+                        <div className="space-y-1">
+                            {aiLinks.map((item) => {
+                                const isActive = location.pathname === item.href || 
+                                    (item.href !== "/" && location.pathname.startsWith(item.href));
+                                return (
+                                    <Link
+                                        key={item.label}
+                                        to={item.href}
+                                        className={cn(
+                                            "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-sidebar",
+                                            isActive
+                                                ? "bg-[hsl(217,33%,12%)] text-white"
+                                                : "text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,10%)] hover:text-white"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "mr-3 flex h-8 w-8 items-center justify-center rounded-md transition-sidebar",
+                                            isActive 
+                                                ? "bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400" 
+                                                : "text-[hsl(215,20%,55%)] group-hover:text-white"
+                                        )}>
+                                            <item.icon className="h-[18px] w-[18px]" />
+                                        </div>
+                                        <span className="flex-1">{item.label}</span>
+                                        {isActive && (
+                                            <ChevronRight className="h-4 w-4 text-cyan-400 opacity-60" />
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Settings */}
+                    <div>
+                        {otherLinks.map((item) => {
+                            const isActive = location.pathname === item.href;
+                            return (
+                                <Link
+                                    key={item.label}
+                                    to={item.href}
+                                    className={cn(
+                                        "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-sidebar",
+                                        isActive
+                                            ? "bg-[hsl(217,33%,12%)] text-white"
+                                            : "text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,10%)] hover:text-white"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "mr-3 flex h-8 w-8 items-center justify-center rounded-md transition-sidebar",
+                                        isActive 
+                                            ? "bg-gradient-to-br from-cyan-400/20 to-blue-500/20 text-cyan-400" 
+                                            : "text-[hsl(215,20%,55%)] group-hover:text-white"
+                                    )}>
+                                        <item.icon className="h-[18px] w-[18px]" />
+                                    </div>
+                                    <span className="flex-1">{item.label}</span>
+                                    {isActive && (
+                                        <ChevronRight className="h-4 w-4 text-cyan-400 opacity-60" />
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </div>
                 </nav>
             </div>
 

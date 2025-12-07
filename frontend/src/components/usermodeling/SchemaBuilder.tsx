@@ -28,6 +28,9 @@ import {
     ChevronRight,
     X,
     Check,
+    Pencil,
+    Save,
+    Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +51,9 @@ interface SchemaBuilderProps {
     onFieldsChange: (fields: SchemaField[]) => void;
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    isEditing: boolean;
+    onEditToggle: () => void;
+    onSave: () => void;
 }
 
 const fieldTypes: { value: FieldType; label: string }[] = [
@@ -76,6 +82,9 @@ export function SchemaBuilder({
     onFieldsChange,
     isCollapsed = false,
     onToggleCollapse,
+    isEditing,
+    onEditToggle,
+    onSave,
 }: SchemaBuilderProps) {
     const [isAddingField, setIsAddingField] = useState(false);
     const [newField, setNewField] = useState<Partial<SchemaField>>({
@@ -130,14 +139,24 @@ export function SchemaBuilder({
         );
     };
 
+    const handleSaveClick = () => {
+        setIsAddingField(false);
+        onSave();
+    };
+
+    const handleCancelEdit = () => {
+        setIsAddingField(false);
+        onEditToggle();
+    };
+
     return (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Header */}
-            <button
-                onClick={onToggleCollapse}
-                className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors"
-            >
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
+                <button
+                    onClick={onToggleCollapse}
+                    className="flex items-center gap-3 flex-1"
+                >
                     {isCollapsed ? (
                         <ChevronRight className="h-5 w-5 text-slate-400" />
                     ) : (
@@ -151,13 +170,51 @@ export function SchemaBuilder({
                             Define the attributes for your user profiles
                         </p>
                     </div>
-                </div>
+                </button>
                 <div className="flex items-center gap-2">
+                    {!isEditing && (
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 gap-1">
+                            <Lock className="h-3 w-3" />
+                            Read-only
+                        </Badge>
+                    )}
                     <Badge variant="secondary" className="bg-slate-100 text-slate-600">
                         {fields.length} fields
                     </Badge>
+                    {!isCollapsed && (
+                        isEditing ? (
+                            <div className="flex items-center gap-2 ml-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleCancelEdit}
+                                    className="h-8"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={handleSaveClick}
+                                    className="h-8 bg-emerald-600 hover:bg-emerald-700 gap-1"
+                                >
+                                    <Save className="h-3.5 w-3.5" />
+                                    Save Schema
+                                </Button>
+                            </div>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onEditToggle}
+                                className="h-8 ml-2 gap-1"
+                            >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                            </Button>
+                        )
+                    )}
                 </div>
-            </button>
+            </div>
 
             {/* Content */}
             {!isCollapsed && (
@@ -168,7 +225,7 @@ export function SchemaBuilder({
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                                        <TableHead className="w-10"></TableHead>
+                                        {isEditing && <TableHead className="w-10"></TableHead>}
                                         <TableHead className="font-semibold text-slate-700">
                                             Field Name
                                         </TableHead>
@@ -181,18 +238,23 @@ export function SchemaBuilder({
                                         <TableHead className="font-semibold text-slate-700">
                                             Description
                                         </TableHead>
-                                        <TableHead className="w-24"></TableHead>
+                                        {isEditing && <TableHead className="w-24"></TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {fields.map((field) => (
                                         <TableRow
                                             key={field.id}
-                                            className="group data-table-row"
+                                            className={cn(
+                                                "group",
+                                                isEditing && "data-table-row"
+                                            )}
                                         >
-                                            <TableCell className="text-center">
-                                                <GripVertical className="h-4 w-4 text-slate-300 cursor-grab" />
-                                            </TableCell>
+                                            {isEditing && (
+                                                <TableCell className="text-center">
+                                                    <GripVertical className="h-4 w-4 text-slate-300 cursor-grab" />
+                                                </TableCell>
+                                            )}
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <code className="text-sm font-mono text-slate-800 bg-slate-100 px-2 py-1 rounded">
@@ -229,31 +291,33 @@ export function SchemaBuilder({
                                             <TableCell className="text-slate-500 text-sm max-w-[200px] truncate">
                                                 {field.description || "—"}
                                             </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {!field.isPrimaryKey && (
+                                            {isEditing && (
+                                                <TableCell>
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {!field.isPrimaryKey && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 text-slate-400 hover:text-amber-600"
+                                                                onClick={() =>
+                                                                    handleSetPrimaryKey(field.id)
+                                                                }
+                                                                title="Set as primary key"
+                                                            >
+                                                                <Key className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-8 w-8 p-0 text-slate-400 hover:text-amber-600"
-                                                            onClick={() =>
-                                                                handleSetPrimaryKey(field.id)
-                                                            }
-                                                            title="Set as primary key"
+                                                            className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
+                                                            onClick={() => handleDeleteField(field.id)}
                                                         >
-                                                            <Key className="h-4 w-4" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
-                                                    )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
-                                                        onClick={() => handleDeleteField(field.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
+                                                    </div>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -273,18 +337,20 @@ export function SchemaBuilder({
                             <p className="text-sm text-slate-500 mb-4">
                                 Start by adding fields to define your user schema
                             </p>
-                            <Button
-                                onClick={() => setIsAddingField(true)}
-                                className="bg-slate-900 hover:bg-slate-800"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add First Field
-                            </Button>
+                            {isEditing && (
+                                <Button
+                                    onClick={() => setIsAddingField(true)}
+                                    className="bg-slate-900 hover:bg-slate-800"
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add First Field
+                                </Button>
+                            )}
                         </div>
                     )}
 
-                    {/* Add Field Form */}
-                    {isAddingField && (
+                    {/* Add Field Form - Only show in edit mode */}
+                    {isEditing && isAddingField && (
                         <div className="p-5 border-t border-slate-100 bg-slate-50/50">
                             <div className="grid grid-cols-12 gap-4">
                                 <div className="col-span-3">
@@ -382,8 +448,8 @@ export function SchemaBuilder({
                         </div>
                     )}
 
-                    {/* Add Field Button */}
-                    {fields.length > 0 && !isAddingField && (
+                    {/* Add Field Button - Only show in edit mode */}
+                    {isEditing && fields.length > 0 && !isAddingField && (
                         <div className="p-4 border-t border-slate-100">
                             <Button
                                 variant="outline"
@@ -400,4 +466,3 @@ export function SchemaBuilder({
         </div>
     );
 }
-

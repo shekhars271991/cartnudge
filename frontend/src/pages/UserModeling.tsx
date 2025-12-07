@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     Users,
     Settings2,
-    Save,
-    RotateCcw,
 } from "lucide-react";
 import { SchemaBuilder, type SchemaField } from "@/components/usermodeling/SchemaBuilder";
 import { DataIngestion } from "@/components/usermodeling/DataIngestion";
 import { OverviewStats } from "@/components/usermodeling/OverviewStats";
 import { UserDirectory, type UserRecord } from "@/components/usermodeling/UserDirectory";
 import { UserDetailDrawer } from "@/components/usermodeling/UserDetailDrawer";
+import { IngestionLogs } from "@/components/usermodeling/IngestionLogs";
+import { SchemaWorkflow } from "@/components/usermodeling/SchemaWorkflow";
 
 // Sample data for demonstration
 const sampleSchema: SchemaField[] = [
@@ -189,6 +188,10 @@ export default function UserModeling() {
     const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+    // Edit mode for schema
+    const [isSchemaEditing, setIsSchemaEditing] = useState(false);
+    const [showWorkflow, setShowWorkflow] = useState(false);
+
     // Collapsible states
     const [isSchemaCollapsed, setIsSchemaCollapsed] = useState(false);
     const [isIngestionCollapsed, setIsIngestionCollapsed] = useState(false);
@@ -201,6 +204,15 @@ export default function UserModeling() {
     const handleUserClick = (user: UserRecord) => {
         setSelectedUser(user);
         setIsDrawerOpen(true);
+    };
+
+    const handleSchemaSave = () => {
+        setShowWorkflow(true);
+    };
+
+    const handleWorkflowComplete = () => {
+        setShowWorkflow(false);
+        setIsSchemaEditing(false);
     };
 
     return (
@@ -216,14 +228,7 @@ export default function UserModeling() {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="gap-2">
-                        <RotateCcw className="h-4 w-4" />
-                        Reset
-                    </Button>
-                    <Button className="gap-2 bg-slate-900 hover:bg-slate-800">
-                        <Save className="h-4 w-4" />
-                        Save Changes
-                    </Button>
+                    <IngestionLogs logs={[]} onRefresh={() => console.log("Refresh logs")} />
                 </div>
             </div>
 
@@ -277,6 +282,9 @@ export default function UserModeling() {
                         onFieldsChange={setSchema}
                         isCollapsed={isSchemaCollapsed}
                         onToggleCollapse={() => setIsSchemaCollapsed(!isSchemaCollapsed)}
+                        isEditing={isSchemaEditing}
+                        onEditToggle={() => setIsSchemaEditing(!isSchemaEditing)}
+                        onSave={handleSchemaSave}
                     />
 
                     {/* Data Ingestion */}
@@ -309,7 +317,12 @@ export default function UserModeling() {
                     setSelectedUser(null);
                 }}
             />
+
+            {/* Schema Save Workflow */}
+            <SchemaWorkflow
+                open={showWorkflow}
+                onComplete={handleWorkflowComplete}
+            />
         </div>
     );
 }
-
