@@ -101,6 +101,7 @@ export function PipelineConfigDrawer({
         required: false,
         description: "",
     });
+    const [savedToBucket, setSavedToBucket] = useState(false);
 
     // Reset state when pipeline changes
     useEffect(() => {
@@ -231,8 +232,6 @@ export function PipelineConfigDrawer({
 
         return JSON.stringify(payload, null, 2);
     };
-
-    const [savedToBucket, setSavedToBucket] = useState(false);
 
     const handleSaveChanges = () => {
         // Save changes to deployment bucket (not directly deploying)

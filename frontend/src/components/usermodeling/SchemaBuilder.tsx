@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,8 +30,9 @@ import {
     X,
     Check,
     Pencil,
-    Save,
     Lock,
+    Rocket,
+    ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -87,6 +89,7 @@ export function SchemaBuilder({
     onSave,
 }: SchemaBuilderProps) {
     const [isAddingField, setIsAddingField] = useState(false);
+    const [savedToBucket, setSavedToBucket] = useState(false);
     const [newField, setNewField] = useState<Partial<SchemaField>>({
         name: "",
         type: "string",
@@ -142,10 +145,13 @@ export function SchemaBuilder({
     const handleSaveClick = () => {
         setIsAddingField(false);
         onSave();
+        setSavedToBucket(true);
+        setTimeout(() => setSavedToBucket(false), 5000);
     };
 
     const handleCancelEdit = () => {
         setIsAddingField(false);
+        setSavedToBucket(false);
         onEditToggle();
     };
 
@@ -195,10 +201,10 @@ export function SchemaBuilder({
                                 <Button
                                     size="sm"
                                     onClick={handleSaveClick}
-                                    className="h-8 bg-emerald-600 hover:bg-emerald-700 gap-1"
+                                    className="h-8 bg-violet-600 hover:bg-violet-700 gap-1"
                                 >
-                                    <Save className="h-3.5 w-3.5" />
-                                    Save Schema
+                                    <Rocket className="h-3.5 w-3.5" />
+                                    Save to Bucket
                                 </Button>
                             </div>
                         ) : (
@@ -215,6 +221,34 @@ export function SchemaBuilder({
                     )}
                 </div>
             </div>
+
+            {/* Saved to Bucket Success Message */}
+            {savedToBucket && (
+                <div className="mx-5 mb-0 mt-0 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                                <Check className="h-4 w-4 text-violet-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-violet-900">
+                                    Schema changes saved to deployment bucket
+                                </p>
+                                <p className="text-xs text-violet-600">
+                                    Go to Deployments to review and deploy
+                                </p>
+                            </div>
+                        </div>
+                        <Link to="/deployments">
+                            <Button size="sm" variant="outline" className="gap-1.5 text-violet-700 border-violet-300 hover:bg-violet-100">
+                                <Rocket className="h-3.5 w-3.5" />
+                                View Deployments
+                                <ExternalLink className="h-3 w-3" />
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             {/* Content */}
             {!isCollapsed && (
