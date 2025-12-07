@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import {
     Receipt,
     Tag,
     CreditCard,
-    Package,
+    Package as PackageIcon,
     Truck,
     Clock,
     Megaphone,
@@ -39,13 +40,14 @@ import {
     Database,
     ChevronRight,
     Pause,
-    Play,
     Plus,
     Trash2,
     Settings,
     BarChart3,
     TrendingUp,
     AlertCircle,
+    Rocket,
+    ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PipelineTemplate, PipelineEvent } from "./types";
@@ -57,7 +59,7 @@ const iconMap: Record<string, React.ElementType> = {
     Receipt,
     Tag,
     CreditCard,
-    Package,
+    Package: PackageIcon,
     Truck,
     Clock,
     Megaphone,
@@ -109,6 +111,7 @@ export function PipelineConfigDrawer({
             setActiveTab("events");
             setIsAddingEvent(false);
             setIsAddingField(null);
+            setSavedToBucket(false);
         }
     }, [pipeline?.id, open]);
 
@@ -229,27 +232,21 @@ export function PipelineConfigDrawer({
         return JSON.stringify(payload, null, 2);
     };
 
-    const handleActivate = () => {
+    const [savedToBucket, setSavedToBucket] = useState(false);
+
+    const handleSaveChanges = () => {
+        // Save changes to deployment bucket (not directly deploying)
         onSave({
             ...pipeline,
-            status: "active",
             events,
             webhookEndpoint,
         });
-        setMode("stats");
+        setSavedToBucket(true);
+        setTimeout(() => setSavedToBucket(false), 5000);
     };
 
     const handlePauseAndEdit = () => {
         setMode("configure");
-    };
-
-    const handleResume = () => {
-        onSave({
-            ...pipeline,
-            status: "active",
-            events,
-        });
-        setMode("stats");
     };
 
     const handleDeactivate = () => {
@@ -882,6 +879,34 @@ export function PipelineConfigDrawer({
                 {/* Content */}
                 {mode === "stats" ? renderStatsView() : renderConfigureView()}
 
+                {/* Saved to Bucket Success Message */}
+                {savedToBucket && (
+                    <div className="mx-6 mb-0 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                                    <Check className="h-4 w-4 text-violet-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-violet-900">
+                                        Changes saved to deployment bucket
+                                    </p>
+                                    <p className="text-xs text-violet-600">
+                                        Go to Deployments to review and deploy
+                                    </p>
+                                </div>
+                            </div>
+                            <Link to="/deployments">
+                                <Button size="sm" variant="outline" className="gap-1.5 text-violet-700 border-violet-300 hover:bg-violet-100">
+                                    <Rocket className="h-3.5 w-3.5" />
+                                    View Deployments
+                                    <ExternalLink className="h-3 w-3" />
+                                </Button>
+                            </Link>
+                        </div>
+                </div>
+                )}
+
                 {/* Footer Actions */}
                 <div className="sticky bottom-0 p-6 border-t border-slate-200 bg-white">
                     <div className="flex items-center justify-between">
@@ -901,22 +926,13 @@ export function PipelineConfigDrawer({
                             <Button variant="outline" onClick={onClose}>
                                 Close
                             </Button>
-                            {!isActive && events.length > 0 && (
+                            {events.length > 0 && mode === "configure" && (
                             <Button
-                                onClick={handleActivate}
-                                    className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                                >
-                                    <Play className="h-4 w-4" />
-                                    Activate Pipeline
-                                </Button>
-                            )}
-                            {isActive && mode === "configure" && (
-                                <Button
-                                    onClick={handleResume}
-                                    className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                                >
-                                    <Check className="h-4 w-4" />
-                                    Save & Resume
+                                    onClick={handleSaveChanges}
+                                    className="gap-2 bg-violet-600 hover:bg-violet-700"
+                            >
+                                    <Rocket className="h-4 w-4" />
+                                    Save to Deployment Bucket
                             </Button>
                             )}
                         </div>

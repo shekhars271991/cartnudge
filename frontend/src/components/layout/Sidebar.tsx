@@ -10,6 +10,7 @@ import {
     Radio,
     Settings,
     ChevronRight,
+    Rocket,
 } from "lucide-react";
 import ProjectSwitcher from "./ProjectSwitcher";
 
@@ -26,6 +27,10 @@ export function Sidebar() {
         { href: "/models", label: "Prediction Models", icon: BrainCircuit },
         { href: "/workflows", label: "Nudge Workflows", icon: Workflow },
         { href: "/channels", label: "Output Channels", icon: Radio },
+    ];
+
+    const operationsLinks = [
+        { href: "/deployments", label: "Deployments", icon: Rocket },
     ];
 
     const otherLinks = [
@@ -150,6 +155,44 @@ export function Sidebar() {
                                         <span className="flex-1">{item.label}</span>
                                         {isActive && (
                                             <ChevronRight className="h-4 w-4 text-cyan-400 opacity-60" />
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Operations Section */}
+                    <div>
+                        <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-[hsl(215,20%,40%)]">
+                            Operations
+                        </p>
+                        <div className="space-y-1">
+                            {operationsLinks.map((item) => {
+                                const isActive = location.pathname === item.href || 
+                                    (item.href !== "/" && location.pathname.startsWith(item.href));
+                                return (
+                                    <Link
+                                        key={item.label}
+                                        to={item.href}
+                                        className={cn(
+                                            "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-sidebar",
+                                            isActive
+                                                ? "bg-[hsl(217,33%,12%)] text-white"
+                                                : "text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,10%)] hover:text-white"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "mr-3 flex h-8 w-8 items-center justify-center rounded-md transition-sidebar",
+                                            isActive 
+                                                ? "bg-gradient-to-br from-violet-400/20 to-purple-500/20 text-violet-400" 
+                                                : "text-[hsl(215,20%,55%)] group-hover:text-white"
+                                        )}>
+                                            <item.icon className="h-[18px] w-[18px]" />
+                                        </div>
+                                        <span className="flex-1">{item.label}</span>
+                                        {isActive && (
+                                            <ChevronRight className="h-4 w-4 text-violet-400 opacity-60" />
                                         )}
                                     </Link>
                                 );

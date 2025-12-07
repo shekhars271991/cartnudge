@@ -7,6 +7,7 @@ import UserModeling from "./pages/UserModeling";
 import FeaturePipelines from "./pages/FeaturePipelines";
 import NewPipeline from "./pages/pipelines/NewPipeline";
 import PipelineDetails from "./pages/pipelines/PipelineDetails";
+import Deployments from "./pages/Deployments";
 import Models from "./pages/Models";
 import Workflows from "./pages/Workflows";
 import Channels from "./pages/Channels";
@@ -22,6 +23,7 @@ function App() {
           <Route path="/feature-pipelines" element={<FeaturePipelines />} />
           <Route path="/pipelines/new" element={<NewPipeline />} />
           <Route path="/pipelines/:id" element={<PipelineDetails />} />
+          <Route path="/deployments" element={<Deployments />} />
           <Route path="/models" element={<Models />} />
           <Route path="/workflows" element={<Workflows />} />
           <Route path="/channels" element={<Channels />} />
