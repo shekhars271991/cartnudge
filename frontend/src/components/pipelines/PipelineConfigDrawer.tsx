@@ -119,8 +119,9 @@ export function PipelineConfigDrawer({
 
     const Icon = iconMap[pipeline.icon] || Circle;
     const isActive = pipeline.status === "active";
-    const webhookEndpoint = `https://api.cartnudge.ai/v1/events/${pipeline.id}`;
-    const apiKey = "sk_live_xxxxxxxxxxxxxxxx";
+    const baseUrl = import.meta.env.VITE_WEBHOOK_BASE_URL || "https://api.cartnudge.ai/v1";
+    const webhookEndpoint = `${baseUrl}/events/${pipeline.id}`;
+    const apiKey = import.meta.env.VITE_DEMO_SECRET_KEY || "cnk_sec_xxxxxxxxxxxxxxxxxxxx";
 
     const handleCopy = async (text: string, type: string) => {
         await navigator.clipboard.writeText(text);

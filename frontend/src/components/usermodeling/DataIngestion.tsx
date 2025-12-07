@@ -36,8 +36,8 @@ export function DataIngestion({
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
 
-    const apiEndpoint = "https://api.cartnudge.ai/v1/users";
-    const apiKey = "sk_live_xxxxxxxxxxxxxxxx";
+    const apiEndpoint = import.meta.env.VITE_WEBHOOK_BASE_URL || "https://api.cartnudge.ai/v1/users";
+    const apiKey = import.meta.env.VITE_DEMO_SECRET_KEY || "cnk_sec_xxxxxxxxxxxxxxxxxxxx";
 
     const generateCurlSnippet = () => {
         const sampleData = schema.reduce((acc, field) => {

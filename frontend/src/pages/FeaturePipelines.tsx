@@ -85,7 +85,7 @@ export default function FeaturePipelines() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                        Feature Pipelines
+                        Data Pipelines
                     </h1>
                     <p className="text-slate-500 mt-1">
                         Configure data pipelines to build rich user profiles

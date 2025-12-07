@@ -70,7 +70,7 @@ export function PipelineWizard({ children }: { children: React.ReactNode }) {
                         </div>
                         <div className="space-y-2">
                             <Label>API Key</Label>
-                            <Input type="password" placeholder="sk_live_..." />
+                            <Input type="password" placeholder="cnk_sec_..." />
                         </div>
                         <div className="space-y-2">
                             <Label>Store URL</Label>

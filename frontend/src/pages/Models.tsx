@@ -255,7 +255,7 @@ const sampleModels: PredictionModel[] = [
         createdAt: "Dec 1, 2025",
         lastUpdated: "2 hours ago",
         inferenceEndpoint: "https://api.cartnudge.ai/v1/predict/purchase_intent",
-        apiKey: "sk_live_xxxxxxxxxxxxxxxx",
+        apiKey: "cnk_model_xxxxxxxxxxxxxxxx",
     },
     {
         id: "model_2",
@@ -292,7 +292,7 @@ const sampleModels: PredictionModel[] = [
         createdAt: "Dec 3, 2025",
         lastUpdated: "1 day ago",
         inferenceEndpoint: "https://api.cartnudge.ai/v1/predict/cart_abandonment",
-        apiKey: "sk_live_yyyyyyyyyyyyyyyy",
+        apiKey: "cnk_model_yyyyyyyyyyyyyyyy",
     },
 ];
 

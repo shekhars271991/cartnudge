@@ -150,7 +150,7 @@ export function ConfigDrawer({ isOpen, onClose, connectorName }: ConfigDrawerPro
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="api-key">API Key</Label>
-                                <Input id="api-key" type="password" placeholder="sk_live_..." />
+                                <Input id="api-key" type="password" placeholder="cnk_sec_..." />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="store-url">Store URL</Label>

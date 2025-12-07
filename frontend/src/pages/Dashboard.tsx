@@ -89,7 +89,7 @@ const actionItems = [
         title: "Complete Cart Events pipeline",
         description: "Cart Events pipeline needs field configuration",
         action: "Configure",
-        link: "/feature-pipelines",
+        link: "/data-pipelines",
         priority: "medium",
     },
     {
@@ -160,7 +160,7 @@ const nudgeTypeData = [
 // System status
 const systemStatus = [
     { name: "Data Ingestion", status: "healthy", latency: "45ms", uptime: "99.9%" },
-    { name: "Feature Pipelines", status: "healthy", latency: "120ms", uptime: "99.8%" },
+    { name: "Data Pipelines", status: "healthy", latency: "120ms", uptime: "99.8%" },
     { name: "ML Inference", status: "healthy", latency: "85ms", uptime: "99.7%" },
     { name: "Channel Delivery", status: "degraded", latency: "230ms", uptime: "98.2%" },
     { name: "Webhook API", status: "healthy", latency: "32ms", uptime: "99.9%" },
@@ -581,7 +581,7 @@ export default function Dashboard() {
                                 New Workflow
                             </Button>
                         </Link>
-                        <Link to="/feature-pipelines">
+                        <Link to="/data-pipelines">
                             <Button variant="outline" className="bg-transparent border-slate-600 text-white hover:bg-slate-700">
                                 <Database className="h-4 w-4 mr-2" />
                                 Configure Pipeline

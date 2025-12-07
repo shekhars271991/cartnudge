@@ -11,6 +11,7 @@ import {
     Settings,
     ChevronRight,
     Rocket,
+    Sparkles,
 } from "lucide-react";
 import ProjectSwitcher from "./ProjectSwitcher";
 
@@ -19,12 +20,13 @@ export function Sidebar() {
 
     const dataLinks = [
         { href: "/user-modeling", label: "User Modeling", icon: Users },
-        { href: "/feature-pipelines", label: "Feature Pipelines", icon: Plug },
+        { href: "/data-pipelines", label: "Data Pipelines", icon: Plug },
         { href: "/feature-store", label: "Feature Store", icon: Database },
     ];
 
     const aiLinks = [
         { href: "/models", label: "Prediction Models", icon: BrainCircuit },
+        { href: "/llm-config", label: "LLM Configuration", icon: Sparkles },
         { href: "/workflows", label: "Nudge Workflows", icon: Workflow },
         { href: "/channels", label: "Output Channels", icon: Radio },
     ];
@@ -236,7 +238,15 @@ export function Sidebar() {
 
             {/* User Profile */}
             <div className="border-t border-[hsl(217,33%,15%)] p-4">
-                <div className="flex items-center rounded-lg p-2 hover:bg-[hsl(217,33%,10%)] transition-sidebar cursor-pointer">
+                <Link 
+                    to="/profile"
+                    className={cn(
+                        "flex items-center rounded-lg p-2 transition-sidebar",
+                        location.pathname === "/profile"
+                            ? "bg-[hsl(217,33%,12%)]"
+                            : "hover:bg-[hsl(217,33%,10%)]"
+                    )}
+                >
                     <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
                         JD
                     </div>
@@ -244,8 +254,13 @@ export function Sidebar() {
                         <p className="text-sm font-medium text-white truncate">John Doe</p>
                         <p className="text-xs text-[hsl(215,20%,55%)] truncate">john@company.com</p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-[hsl(215,20%,45%)]" />
-                </div>
+                    <ChevronRight className={cn(
+                        "h-4 w-4",
+                        location.pathname === "/profile"
+                            ? "text-violet-400"
+                            : "text-[hsl(215,20%,45%)]"
+                    )} />
+                </Link>
             </div>
         </div>
     );
