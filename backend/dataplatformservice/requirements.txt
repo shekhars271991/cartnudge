@@ -1,0 +1,39 @@
+# CartNudge.ai Data Platform Service
+# ====================================
+
+# Web Framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
+
+# MongoDB
+motor==3.3.2
+pymongo==4.6.1
+
+# Kafka
+aiokafka==0.10.0
+
+# Aerospike
+aerospike==15.0.0
+
+# Redis
+redis==5.0.1
+
+# Validation & Settings
+pydantic==2.6.1
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# HTTP Client
+httpx==0.26.0
+
+# Utilities
+python-dotenv==1.0.1
+structlog==24.1.0
+orjson==3.9.13
+
+# Development
+pytest==8.0.0
+pytest-asyncio==0.23.4
+black==24.1.1
+ruff==0.2.0
