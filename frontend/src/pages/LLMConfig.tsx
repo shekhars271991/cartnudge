@@ -1211,7 +1211,7 @@ export default function LLMConfig() {
                                         className="w-full"
                                         onClick={() => {
                                             setTestPrompt(selectedTemplate.prompt);
-                                            handleTestPrompt();
+                                            handleTestPrompt(selectedTemplate.prompt);
                                         }}
                                         disabled={isTesting}
                                     >

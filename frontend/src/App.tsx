@@ -4,7 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 
 // Page imports
-import UserModeling from "./pages/UserModeling";
+import DataModeling from "./pages/DataModeling";
 import FeaturePipelines from "./pages/FeaturePipelines";
 import FeatureStore from "./pages/FeatureStore";
 import NewPipeline from "./pages/pipelines/NewPipeline";
@@ -27,7 +27,7 @@ function App() {
         {/* App Routes */}
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/user-modeling" element={<UserModeling />} />
+          <Route path="/data-modeling" element={<DataModeling />} />
           <Route path="/data-pipelines" element={<FeaturePipelines />} />
           <Route path="/feature-store" element={<FeatureStore />} />
           <Route path="/pipelines/new" element={<NewPipeline />} />

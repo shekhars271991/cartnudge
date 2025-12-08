@@ -19,9 +19,9 @@ export function Sidebar() {
     const location = useLocation();
 
     const dataLinks = [
-        { href: "/user-modeling", label: "User Modeling", icon: Users },
+        { href: "/data-modeling", label: "Data Modeling", icon: Database },
         { href: "/data-pipelines", label: "Data Pipelines", icon: Plug },
-        { href: "/feature-store", label: "Feature Store", icon: Database },
+        { href: "/feature-store", label: "Feature Store", icon: Users },
     ];
 
     const aiLinks = [
@@ -205,14 +205,14 @@ export function Sidebar() {
                     {/* Settings */}
                     <div>
                         {otherLinks.map((item) => {
-                            const isActive = location.pathname === item.href;
-                            return (
-                                <Link
-                                    key={item.label}
-                                    to={item.href}
-                                    className={cn(
+                        const isActive = location.pathname === item.href;
+                        return (
+                            <Link
+                                key={item.label}
+                                to={item.href}
+                                className={cn(
                                         "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-sidebar",
-                                        isActive
+                                    isActive
                                             ? "bg-[hsl(217,33%,12%)] text-white"
                                             : "text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,10%)] hover:text-white"
                                     )}
@@ -229,9 +229,9 @@ export function Sidebar() {
                                     {isActive && (
                                         <ChevronRight className="h-4 w-4 text-cyan-400 opacity-60" />
                                     )}
-                                </Link>
-                            );
-                        })}
+                            </Link>
+                        );
+                    })}
                     </div>
                 </nav>
             </div>
