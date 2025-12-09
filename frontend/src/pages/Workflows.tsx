@@ -71,6 +71,8 @@ import {
     Settings,
     AlertCircle,
 } from "lucide-react";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 // Types
 interface Workflow {
@@ -376,6 +378,7 @@ const getInitialEdges = (workflowType: WorkflowType): Edge[] => {
 };
 
 export default function Workflows() {
+    const { selectedProject } = useProject();
     const [workflows, setWorkflows] = useState<Workflow[]>(sampleWorkflows);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -452,6 +455,16 @@ export default function Workflows() {
             setSelectedNode(null);
         }
     }, [selectedNode, setNodes, setEdges]);
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to build and manage your nudge workflows."
+            />
+        );
+    }
 
     // Filter workflows
     const filteredWorkflows = workflows.filter(wf => {

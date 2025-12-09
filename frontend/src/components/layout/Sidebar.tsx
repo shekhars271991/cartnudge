@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     LayoutDashboard,
     Users,
@@ -17,6 +18,16 @@ import ProjectSwitcher from "./ProjectSwitcher";
 
 export function Sidebar() {
     const location = useLocation();
+    const { user } = useAuth();
+
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
+    };
 
     const dataLinks = [
         { href: "/data-modeling", label: "Data Modeling", icon: Database },
@@ -248,11 +259,15 @@ export function Sidebar() {
                     )}
                 >
                     <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-                        JD
+                        {user ? getInitials(user.name) : "?"}
                     </div>
                     <div className="ml-3 flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">John Doe</p>
-                        <p className="text-xs text-[hsl(215,20%,55%)] truncate">john@company.com</p>
+                        <p className="text-sm font-medium text-white truncate">
+                            {user?.name || "User"}
+                        </p>
+                        <p className="text-xs text-[hsl(215,20%,55%)] truncate">
+                            {user?.email || ""}
+                        </p>
                     </div>
                     <ChevronRight className={cn(
                         "h-4 w-4",

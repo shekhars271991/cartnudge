@@ -61,6 +61,8 @@ import {
     Cpu,
     ExternalLink,
 } from "lucide-react";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 // Types
 type LLMProvider = "openai" | "anthropic" | "cohere" | "custom";
@@ -305,6 +307,7 @@ const categoryOptions = [
 ];
 
 export default function LLMConfig() {
+    const { selectedProject } = useProject();
     const [providers, setProviders] = useState<LLMProviderConfig[]>(sampleProviders);
     const [templates, setTemplates] = useState<PromptTemplate[]>(sampleTemplates);
     const [activeTab, setActiveTab] = useState<"providers" | "templates">("providers");
@@ -345,6 +348,16 @@ export default function LLMConfig() {
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<{ type: "provider" | "template"; id: string } | null>(null);
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to configure LLM providers and prompt templates."
+            />
+        );
+    }
 
     // Stats
     const totalRequests = providers.reduce((acc, p) => acc + p.stats.requests, 0);

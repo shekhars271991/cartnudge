@@ -73,6 +73,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 // Types
 interface PipelineField {
@@ -436,6 +438,7 @@ const sampleDatablocks: Datablock[] = [
 ];
 
 export default function FeatureStore() {
+    const { selectedProject } = useProject();
     const [datablocks, setDatablocks] = useState<Datablock[]>(sampleDatablocks);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDatablock, setSelectedDatablock] = useState<Datablock | null>(null);
@@ -445,6 +448,16 @@ export default function FeatureStore() {
     // Edit and delete state
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to view and manage your feature store."
+            />
+        );
+    }
 
     // Create datablock state
     const [createStep, setCreateStep] = useState<"type" | "config">("type");

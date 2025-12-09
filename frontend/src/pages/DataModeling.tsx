@@ -56,6 +56,8 @@ import {
     Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 // Types
 interface SchemaField {
@@ -187,6 +189,7 @@ const sampleLogs: IngestionLog[] = [
 ];
 
 export default function DataModeling() {
+    const { selectedProject } = useProject();
     const [models, setModels] = useState<DataModel[]>(initialModels);
     const [selectedModel, setSelectedModel] = useState<DataModel | null>(null);
     const [isSchemaDrawerOpen, setIsSchemaDrawerOpen] = useState(false);
@@ -197,6 +200,16 @@ export default function DataModeling() {
 
     // Schema editing state
     const [editingSchema, setEditingSchema] = useState<SchemaField[]>([]);
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to configure your data models and schemas."
+            />
+        );
+    }
     const [isEditingMode, setIsEditingMode] = useState(false);
 
     // Ingestion state

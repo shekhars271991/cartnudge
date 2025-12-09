@@ -48,6 +48,8 @@ import {
     Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 import { Link } from "react-router-dom";
 
 // Types
@@ -297,6 +299,7 @@ const sampleModels: PredictionModel[] = [
 ];
 
 export default function Models() {
+    const { selectedProject } = useProject();
     const [models, setModels] = useState<PredictionModel[]>(sampleModels);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedModel, setSelectedModel] = useState<PredictionModel | null>(null);
@@ -307,6 +310,16 @@ export default function Models() {
 
     // Create model state
     const [createStep, setCreateStep] = useState<1 | 2 | 3>(1);
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to train and manage your prediction models."
+            />
+        );
+    }
     const [newModel, setNewModel] = useState({
         name: "",
         type: null as ModelType | null,

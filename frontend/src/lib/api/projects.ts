@@ -11,6 +11,13 @@ import type {
   MessageResponse,
 } from "./types";
 
+// Normalize project data to ensure `id` field exists (backend may return `_id`)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizeProject = (data: any): Project => ({
+  ...data,
+  id: data.id || data._id,
+});
+
 export const projectsApi = {
   /**
    * List all projects for current user
@@ -19,7 +26,10 @@ export const projectsApi = {
     const response = await apiClient.get<ProjectListResponse>("/projects", {
       params: { skip, limit },
     });
-    return response.data;
+    return {
+      ...response.data,
+      items: response.data.items.map(normalizeProject),
+    };
   },
 
   /**
@@ -27,7 +37,7 @@ export const projectsApi = {
    */
   get: async (projectId: string): Promise<Project> => {
     const response = await apiClient.get<Project>(`/projects/${projectId}`);
-    return response.data;
+    return normalizeProject(response.data);
   },
 
   /**
@@ -35,7 +45,7 @@ export const projectsApi = {
    */
   create: async (data: ProjectCreate): Promise<Project> => {
     const response = await apiClient.post<Project>("/projects", data);
-    return response.data;
+    return normalizeProject(response.data);
   },
 
   /**
@@ -43,7 +53,7 @@ export const projectsApi = {
    */
   update: async (projectId: string, data: ProjectUpdate): Promise<Project> => {
     const response = await apiClient.put<Project>(`/projects/${projectId}`, data);
-    return response.data;
+    return normalizeProject(response.data);
   },
 
   /**

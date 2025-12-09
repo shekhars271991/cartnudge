@@ -50,10 +50,11 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
     isLoading,
     selectProject,
     createProject,
+    showCreateDialog,
+    setShowCreateDialog,
   } = useProject();
 
   const [open, setOpen] = React.useState(false);
-  const [showNewProjectDialog, setShowNewProjectDialog] = React.useState(false);
   const [newProjectName, setNewProjectName] = React.useState("");
   const [newProjectDescription, setNewProjectDescription] = React.useState("");
   const [isCreating, setIsCreating] = React.useState(false);
@@ -67,7 +68,7 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
 
     try {
       await createProject(newProjectName.trim(), newProjectDescription.trim() || undefined);
-      setShowNewProjectDialog(false);
+      setShowCreateDialog(false);
       setNewProjectName("");
       setNewProjectDescription("");
     } catch (error) {
@@ -107,7 +108,7 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
       <>
         <Button
           variant="outline"
-          onClick={() => setShowNewProjectDialog(true)}
+          onClick={() => setShowCreateDialog(true)}
           className={cn(
             "w-full justify-center gap-2 bg-[hsl(217,33%,10%)] border-[hsl(217,33%,18%)] text-white hover:bg-[hsl(217,33%,14%)] hover:text-white hover:border-[hsl(217,33%,22%)]",
             className
@@ -118,8 +119,8 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
         </Button>
 
         <CreateProjectDialog
-          open={showNewProjectDialog}
-          onOpenChange={setShowNewProjectDialog}
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
           name={newProjectName}
           setName={setNewProjectName}
           description={newProjectDescription}
@@ -227,7 +228,7 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                 <CommandItem
                   onSelect={() => {
                     setOpen(false);
-                    setShowNewProjectDialog(true);
+                    setShowCreateDialog(true);
                   }}
                   className="text-sm text-[hsl(215,20%,65%)] hover:bg-[hsl(217,33%,14%)] hover:text-white aria-selected:bg-[hsl(217,33%,14%)] px-2 py-2"
                 >
@@ -241,8 +242,8 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
       </Popover>
 
       <CreateProjectDialog
-        open={showNewProjectDialog}
-        onOpenChange={setShowNewProjectDialog}
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
         name={newProjectName}
         setName={setNewProjectName}
         description={newProjectDescription}

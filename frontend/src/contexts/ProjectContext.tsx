@@ -22,6 +22,8 @@ interface ProjectContextType {
   selectedProject: Project | null;
   isLoading: boolean;
   error: string | null;
+  showCreateDialog: boolean;
+  setShowCreateDialog: (show: boolean) => void;
   selectProject: (project: Project) => void;
   refreshProjects: () => Promise<void>;
   createProject: (name: string, description?: string) => Promise<Project>;
@@ -41,6 +43,7 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Load projects when authenticated
   const loadProjects = useCallback(async () => {
@@ -141,6 +144,8 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
         selectedProject,
         isLoading,
         error,
+        showCreateDialog,
+        setShowCreateDialog,
         selectProject,
         refreshProjects,
         createProject,

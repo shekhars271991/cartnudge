@@ -2,13 +2,13 @@ import { Card, Title, AreaChart, BarChart, DonutChart } from "@tremor/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useProject } from "@/contexts/ProjectContext";
 import {
     TrendingUp,
     TrendingDown,
     Users,
     Zap,
     DollarSign,
-    Target,
     AlertCircle,
     CheckCircle2,
     Clock,
@@ -33,6 +33,9 @@ import {
     BarChart3,
     PieChart,
     Layers,
+    Plus,
+    FolderOpen,
+    Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -175,8 +178,96 @@ const recentActivity = [
     { time: "25 min ago", event: "WhatsApp campaign", detail: "450 messages sent", icon: MessageSquare },
 ];
 
+// Empty state component
+function EmptyProjectState() {
+    const { setShowCreateDialog } = useProject();
+
+    return (
+        <div className="min-h-[80vh] flex items-center justify-center">
+            <div className="max-w-lg text-center">
+                {/* Illustration */}
+                <div className="mb-8 relative">
+                    <div className="h-32 w-32 rounded-full bg-gradient-to-br from-cyan-100 to-blue-100 mx-auto flex items-center justify-center">
+                        <FolderOpen className="h-16 w-16 text-cyan-500" />
+                    </div>
+                    <div className="absolute top-0 right-1/4 h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <div className="absolute bottom-0 left-1/4 h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center">
+                        <Zap className="h-3 w-3 text-violet-500" />
+                    </div>
+                </div>
+
+                {/* Content */}
+                <h1 className="text-2xl font-bold text-slate-900 mb-3">
+                    Welcome to CartNudge!
+                </h1>
+                <p className="text-slate-500 mb-8 max-w-md mx-auto">
+                    Create your first project to start tracking users, building prediction models, 
+                    and delivering personalized nudges that convert.
+                </p>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <Button
+                        size="lg"
+                        className="bg-slate-900 hover:bg-slate-800 gap-2"
+                        onClick={() => setShowCreateDialog(true)}
+                    >
+                        <Plus className="h-4 w-4" />
+                        Create Your First Project
+                    </Button>
+                </div>
+
+                {/* Features preview */}
+                <div className="mt-12 grid grid-cols-3 gap-6 text-left">
+                    <div className="p-4 rounded-xl bg-slate-50 border">
+                        <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+                            <Database className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 text-sm mb-1">Data Pipelines</h3>
+                        <p className="text-xs text-slate-500">Connect your data sources and build real-time pipelines</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-slate-50 border">
+                        <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center mb-3">
+                            <Brain className="h-5 w-5 text-violet-600" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 text-sm mb-1">ML Models</h3>
+                        <p className="text-xs text-slate-500">Train purchase prediction models automatically</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-slate-50 border">
+                        <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
+                            <Zap className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 text-sm mb-1">Smart Nudges</h3>
+                        <p className="text-xs text-slate-500">Deliver personalized interventions that convert</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Dashboard() {
+    const { projects, selectedProject, isLoading } = useProject();
     const dataFormatter = (number: number) => `${number.toFixed(1)}%`;
+
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="min-h-[80vh] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                    <p className="text-slate-500">Loading your projects...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show empty state if no projects
+    if (projects.length === 0 || !selectedProject) {
+        return <EmptyProjectState />;
+    }
 
     const getStatusIcon = (status: string) => {
         switch (status) {

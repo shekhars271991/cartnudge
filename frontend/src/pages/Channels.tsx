@@ -63,6 +63,8 @@ import {
     Sparkles,
     ArrowRight,
 } from "lucide-react";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 // Types
 type ChannelType = "whatsapp" | "sms" | "email" | "webhook";
@@ -302,6 +304,7 @@ const userFields = [
 ];
 
 export default function Channels() {
+    const { selectedProject } = useProject();
     const [channels, setChannels] = useState<Channel[]>(sampleChannels);
     const [searchQuery, setSearchQuery] = useState("");
     const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -324,6 +327,16 @@ export default function Channels() {
 
     // Password visibility
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to configure your output channels."
+            />
+        );
+    }
 
     // Filter channels
     const filteredChannels = channels.filter(ch => {

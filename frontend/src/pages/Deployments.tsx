@@ -54,6 +54,8 @@ import {
     Edit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 // Types
 interface DeploymentChange {
@@ -241,6 +243,7 @@ const deploymentHistory: Deployment[] = [
 ];
 
 export default function Deployments() {
+    const { selectedProject } = useProject();
     const [changes, setChanges] = useState(pendingChanges);
     const [history] = useState(deploymentHistory);
     const [isDeploying, setIsDeploying] = useState(false);
@@ -248,6 +251,16 @@ export default function Deployments() {
     const [showHistoryDetail, setShowHistoryDetail] = useState<Deployment | null>(null);
     const [deploymentNote, setDeploymentNote] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to manage deployments."
+            />
+        );
+    }
 
     const removeChange = (changeId: string) => {
         setChanges((prev) => prev.filter((c) => c.id !== changeId));

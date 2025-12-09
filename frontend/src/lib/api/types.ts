@@ -59,7 +59,7 @@ export interface MessageResponse {
 }
 
 // Project types
-export type ProjectRole = "owner" | "admin" | "member";
+export type ProjectRole = "owner" | "admin" | "developer" | "viewer";
 
 export interface ProjectMember {
   user_id: string;
@@ -71,6 +71,7 @@ export interface ProjectMember {
 
 export interface Project {
   id: string;
+  _id?: string; // Backend may return _id instead of id
   name: string;
   description: string | null;
   created_by: string;

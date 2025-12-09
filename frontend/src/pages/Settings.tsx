@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useProject } from "@/contexts/ProjectContext";
-import { membersApi, apiKeysApi } from "@/lib/api";
-import type { ProjectMember, ApiKey, ApiKeyCreated, ProjectRole } from "@/lib/api";
+import { apiKeysApi } from "@/lib/api";
+import type { ApiKey, ApiKeyCreated } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,8 +40,6 @@ import {
   Eye,
   EyeOff,
   Plus,
-  Edit2,
-  Trash2,
   Settings as SettingsIcon,
   Globe,
   AlertCircle,
@@ -49,19 +48,10 @@ import {
   Shield,
   Zap,
   Database,
-  Users,
-  UserPlus,
-  Crown,
   Loader2,
   Check,
+  ChevronRight,
 } from "lucide-react";
-
-// Role badge colors
-const roleColors: Record<ProjectRole, string> = {
-  owner: "bg-amber-100 text-amber-700",
-  admin: "bg-violet-100 text-violet-700",
-  member: "bg-blue-100 text-blue-700",
-};
 
 export default function Settings() {
   const {
@@ -69,30 +59,13 @@ export default function Settings() {
     selectedProject,
     isLoading: projectsLoading,
     createProject,
-    updateProject,
-    deleteProject,
   } = useProject();
 
   // Projects state
   const [showCreateProject, setShowCreateProject] = useState(false);
-  const [showEditProject, setShowEditProject] = useState(false);
-  const [showDeleteProject, setShowDeleteProject] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", description: "" });
-  const [editProject, setEditProject] = useState({ id: "", name: "", description: "" });
-  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const [isUpdatingProject, setIsUpdatingProject] = useState(false);
-  const [isDeletingProject, setIsDeletingProject] = useState(false);
   const [projectError, setProjectError] = useState("");
-
-  // Members state
-  const [members, setMembers] = useState<ProjectMember[]>([]);
-  const [membersLoading, setMembersLoading] = useState(false);
-  const [showInviteMember, setShowInviteMember] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<ProjectRole>("member");
-  const [isInviting, setIsInviting] = useState(false);
-  const [memberError, setMemberError] = useState("");
 
   // API Keys state
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -112,28 +85,6 @@ export default function Settings() {
     debugMode: false,
     dataRetention: "90",
   });
-
-  // Load members when project changes
-  useEffect(() => {
-    const loadMembers = async () => {
-      if (!selectedProject) {
-        setMembers([]);
-        return;
-      }
-
-      setMembersLoading(true);
-      try {
-        const data = await membersApi.list(selectedProject.id);
-        setMembers(data);
-      } catch (error) {
-        console.error("Failed to load members:", error);
-      } finally {
-        setMembersLoading(false);
-      }
-    };
-
-    loadMembers();
-  }, [selectedProject]);
 
   // Load API keys when project changes
   useEffect(() => {
@@ -173,82 +124,6 @@ export default function Settings() {
       setProjectError(axiosError.response?.data?.detail || "Failed to create project");
     } finally {
       setIsCreatingProject(false);
-    }
-  };
-
-  const handleUpdateProject = async () => {
-    if (!editProject.name.trim()) return;
-
-    setIsUpdatingProject(true);
-    setProjectError("");
-
-    try {
-      await updateProject(
-        editProject.id,
-        editProject.name.trim(),
-        editProject.description.trim() || undefined
-      );
-      setShowEditProject(false);
-    } catch (err) {
-      const axiosError = err as AxiosError<ApiError>;
-      setProjectError(axiosError.response?.data?.detail || "Failed to update project");
-    } finally {
-      setIsUpdatingProject(false);
-    }
-  };
-
-  const handleDeleteProject = async () => {
-    if (!projectToDelete) return;
-
-    setIsDeletingProject(true);
-    setProjectError("");
-
-    try {
-      await deleteProject(projectToDelete);
-      setShowDeleteProject(false);
-      setProjectToDelete(null);
-    } catch (err) {
-      const axiosError = err as AxiosError<ApiError>;
-      setProjectError(axiosError.response?.data?.detail || "Failed to delete project");
-    } finally {
-      setIsDeletingProject(false);
-    }
-  };
-
-  // Member handlers
-  const handleInviteMember = async () => {
-    if (!inviteEmail.trim() || !selectedProject) return;
-
-    setIsInviting(true);
-    setMemberError("");
-
-    try {
-      await membersApi.invite(selectedProject.id, {
-        email: inviteEmail.trim(),
-        role: inviteRole,
-      });
-      setShowInviteMember(false);
-      setInviteEmail("");
-      setInviteRole("member");
-      // Reload members
-      const data = await membersApi.list(selectedProject.id);
-      setMembers(data);
-    } catch (err) {
-      const axiosError = err as AxiosError<ApiError>;
-      setMemberError(axiosError.response?.data?.detail || "Failed to send invitation");
-    } finally {
-      setIsInviting(false);
-    }
-  };
-
-  const handleRemoveMember = async (userId: string) => {
-    if (!selectedProject) return;
-
-    try {
-      await membersApi.remove(selectedProject.id, userId);
-      setMembers((prev) => prev.filter((m) => m.user_id !== userId));
-    } catch (error) {
-      console.error("Failed to remove member:", error);
     }
   };
 
@@ -299,20 +174,13 @@ export default function Settings() {
     return key.slice(0, 12) + "..." + key.slice(-4);
   };
 
-  const getRoleBadge = (role: ProjectRole) => (
-    <Badge className={cn("capitalize", roleColors[role])}>
-      {role === "owner" && <Crown className="h-3 w-3 mr-1" />}
-      {role}
-    </Badge>
-  );
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
         <p className="text-slate-500 mt-1">
-          Manage projects, team members, API keys, and platform settings
+          Manage projects, API keys, and platform settings
         </p>
       </div>
 
@@ -321,10 +189,6 @@ export default function Settings() {
           <TabsTrigger value="projects" className="gap-2">
             <FolderOpen className="h-4 w-4" />
             Projects
-          </TabsTrigger>
-          <TabsTrigger value="team" className="gap-2">
-            <Users className="h-4 w-4" />
-            Team
           </TabsTrigger>
           <TabsTrigger value="api-keys" className="gap-2">
             <Key className="h-4 w-4" />
@@ -365,8 +229,15 @@ export default function Settings() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {projects.map((project, index) => (
-                <div key={project.id} className="bg-white rounded-xl border p-5">
+              {projects.map((project, index) => {
+                // Handle both `id` and `_id` from backend
+                const projectId = project.id || project._id;
+                return (
+                <Link
+                  key={projectId}
+                  to={`/project/${projectId}`}
+                  className="bg-white rounded-xl border p-5 hover:border-blue-300 hover:shadow-sm transition-all group"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
                       <div
@@ -384,7 +255,9 @@ export default function Settings() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-slate-900">{project.name}</h3>
+                          <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                            {project.name}
+                          </h3>
                           {selectedProject?.id === project.id && (
                             <Badge variant="outline" className="text-xs">Current</Badge>
                           )}
@@ -398,104 +271,15 @@ export default function Settings() {
                             {new Date(project.created_at).toLocaleDateString()}
                           </span>
                           <span>•</span>
-                          <span>{project.members.length} members</span>
+                          <span>{project.members.length} contributors</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditProject({
-                            id: project.id,
-                            name: project.name,
-                            description: project.description || "",
-                          });
-                          setShowEditProject(true);
-                        }}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => {
-                          setProjectToDelete(project.id);
-                          setShowDeleteProject(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Team Tab */}
-        <TabsContent value="team" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Team Members</h2>
-              <p className="text-sm text-slate-500">
-                {selectedProject
-                  ? `Manage members of ${selectedProject.name}`
-                  : "Select a project to manage team members"}
-              </p>
-            </div>
-            <Button onClick={() => setShowInviteMember(true)} disabled={!selectedProject}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite Member
-            </Button>
-          </div>
-
-          {!selectedProject ? (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed">
-              <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No project selected</h3>
-              <p className="text-sm text-slate-500">Select a project from the sidebar to manage team members.</p>
-            </div>
-          ) : membersLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border p-6">
-              <div className="space-y-4">
-                {members.map((member) => (
-                  <div
-                    key={member.user_id}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white font-semibold">
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{member.name}</p>
-                        <p className="text-xs text-slate-500">{member.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {getRoleBadge(member.role)}
-                      {member.role !== "owner" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-slate-400 hover:text-red-600"
-                          onClick={() => handleRemoveMember(member.user_id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                </Link>
+              );
+              })}
             </div>
           )}
         </TabsContent>
@@ -791,145 +575,6 @@ export default function Settings() {
                 </>
               ) : (
                 "Create Project"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Project Dialog */}
-      <Dialog open={showEditProject} onOpenChange={setShowEditProject}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-            <DialogDescription>Update project details.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {projectError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                {projectError}
-              </div>
-            )}
-            <div>
-              <Label>Project Name</Label>
-              <Input
-                value={editProject.name}
-                onChange={(e) => setEditProject({ ...editProject, name: e.target.value })}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Textarea
-                value={editProject.description}
-                onChange={(e) => setEditProject({ ...editProject, description: e.target.value })}
-                className="mt-1.5"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditProject(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdateProject}
-              disabled={!editProject.name.trim() || isUpdatingProject}
-            >
-              {isUpdatingProject ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Project Dialog */}
-      <Dialog open={showDeleteProject} onOpenChange={setShowDeleteProject}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Project</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this project? This action cannot be undone
-              and will remove all associated data.
-            </DialogDescription>
-          </DialogHeader>
-          {projectError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-              {projectError}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteProject(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteProject} disabled={isDeletingProject}>
-              {isDeletingProject ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Project"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Invite Member Dialog */}
-      <Dialog open={showInviteMember} onOpenChange={setShowInviteMember}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Invite Team Member</DialogTitle>
-            <DialogDescription>Send an invitation to join your project.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {memberError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                {memberError}
-              </div>
-            )}
-            <div>
-              <Label>Email Address</Label>
-              <Input
-                type="email"
-                placeholder="colleague@company.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label>Role</Label>
-              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as ProjectRole)}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="member">Member</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteMember(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleInviteMember} disabled={!inviteEmail.trim() || isInviting}>
-              {isInviting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Send Invitation"
               )}
             </Button>
           </DialogFooter>

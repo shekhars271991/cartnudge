@@ -17,9 +17,22 @@ import {
     type PipelineTemplate,
     type PipelineCategory,
 } from "@/components/pipelines/types";
+import { useProject } from "@/contexts/ProjectContext";
+import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 export default function FeaturePipelines() {
+    const { selectedProject } = useProject();
     const [pipelines, setPipelines] = useState<PipelineTemplate[]>(PIPELINE_TEMPLATES);
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to configure and run your data pipelines."
+            />
+        );
+    }
     const [selectedPipeline, setSelectedPipeline] = useState<PipelineTemplate | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");

@@ -25,6 +25,7 @@ import Channels from "./pages/Channels";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import AcceptInvitation from "./pages/AcceptInvitation";
+import ProjectDetails from "./pages/ProjectDetails";
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
               <Route path="/workflows" element={<Workflows />} />
               <Route path="/channels" element={<Channels />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/project/:projectId" element={<ProjectDetails />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
           </Routes>
