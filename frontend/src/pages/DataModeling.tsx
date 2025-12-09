@@ -200,16 +200,6 @@ export default function DataModeling() {
 
     // Schema editing state
     const [editingSchema, setEditingSchema] = useState<SchemaField[]>([]);
-
-    // Show empty state if no project selected
-    if (!selectedProject) {
-        return (
-            <EmptyProjectState
-                title="No Project Selected"
-                description="Select or create a project to configure your data models and schemas."
-            />
-        );
-    }
     const [isEditingMode, setIsEditingMode] = useState(false);
 
     // Ingestion state
@@ -221,6 +211,16 @@ export default function DataModeling() {
     // New model state
     const [newModelName, setNewModelName] = useState("");
     const [newModelDescription, setNewModelDescription] = useState("");
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to configure your data models and schemas."
+            />
+        );
+    }
 
     const getModelIcon = (icon: DataModel["icon"]) => {
         switch (icon) {

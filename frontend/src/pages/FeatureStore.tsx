@@ -449,16 +449,6 @@ export default function FeatureStore() {
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    // Show empty state if no project selected
-    if (!selectedProject) {
-        return (
-            <EmptyProjectState
-                title="No Project Selected"
-                description="Select or create a project to view and manage your feature store."
-            />
-        );
-    }
-
     // Create datablock state
     const [createStep, setCreateStep] = useState<"type" | "config">("type");
     const [newDatablockType, setNewDatablockType] = useState<"direct" | "aggregated" | "training" | null>(null);
@@ -579,6 +569,16 @@ export default function FeatureStore() {
             db.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             db.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to view and manage your feature store."
+            />
+        );
+    }
 
     const togglePipeline = (pipelineName: string) => {
         setNewDatablock((prev) => ({

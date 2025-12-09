@@ -310,16 +310,6 @@ export default function Models() {
 
     // Create model state
     const [createStep, setCreateStep] = useState<1 | 2 | 3>(1);
-
-    // Show empty state if no project selected
-    if (!selectedProject) {
-        return (
-            <EmptyProjectState
-                title="No Project Selected"
-                description="Select or create a project to train and manage your prediction models."
-            />
-        );
-    }
     const [newModel, setNewModel] = useState({
         name: "",
         type: null as ModelType | null,
@@ -332,6 +322,16 @@ export default function Models() {
             model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             model.type.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Show empty state if no project selected
+    if (!selectedProject) {
+        return (
+            <EmptyProjectState
+                title="No Project Selected"
+                description="Select or create a project to train and manage your prediction models."
+            />
+        );
+    }
 
     const resetCreateForm = () => {
         setCreateStep(1);
