@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,53 +12,60 @@ import {
   EyeOff,
   Mail,
   Lock,
+  User,
   ArrowRight,
   Loader2,
-  Sparkles,
-  TrendingUp,
-  Zap,
-  Shield,
+  Check,
 } from "lucide-react";
 
-export default function Login() {
+export default function Register() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { register, isAuthenticated, isLoading: authLoading } = useAuth();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
-      navigate(from, { replace: true });
+      navigate("/", { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate, location]);
+  }, [isAuthenticated, authLoading, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
-      setError("Please enter your email and password");
+    if (!name || !email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (!agreeTerms) {
+      setError("Please agree to the terms of service");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await login({ email, password });
+      await register({ name, email, password });
       // Navigation will happen via the useEffect above
     } catch (err) {
       const axiosError = err as AxiosError<ApiError>;
       setError(
         axiosError.response?.data?.detail ||
-          "Invalid email or password. Please try again."
+          "Registration failed. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -66,26 +73,10 @@ export default function Login() {
   };
 
   const features = [
-    {
-      icon: Sparkles,
-      title: "AI-Powered Nudges",
-      description: "Personalized interventions at the perfect moment",
-    },
-    {
-      icon: TrendingUp,
-      title: "Increase Conversions",
-      description: "Up to 25% lift in purchase completion rates",
-    },
-    {
-      icon: Zap,
-      title: "Real-time Predictions",
-      description: "ML models scoring users in milliseconds",
-    },
-    {
-      icon: Shield,
-      title: "Enterprise Ready",
-      description: "SOC 2 compliant with 99.9% uptime SLA",
-    },
+    "14-day free trial, no credit card required",
+    "Up to 10,000 monthly active users",
+    "All core features included",
+    "Email support",
   ];
 
   // Show loading while checking auth state
@@ -133,62 +124,52 @@ export default function Login() {
 
           <div className="mt-16">
             <h1 className="text-4xl font-bold text-white leading-tight">
-              Turn hesitation into
+              Start your
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                conversion
+                free trial
               </span>
             </h1>
             <p className="mt-6 text-lg text-slate-400 max-w-md">
-              The AI-powered platform that predicts purchase intent and delivers
-              personalized nudges to maximize your conversion rates.
+              Join thousands of e-commerce businesses using CartNudge to boost
+              their conversion rates.
             </p>
           </div>
         </div>
 
-        {/* Features */}
-        <div className="relative z-10 grid grid-cols-2 gap-6 mt-auto">
-          {features.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <div key={feature.title} className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-5 w-5 text-cyan-400" />
-                </div>
-                <div>
-                  <p className="font-semibold text-white text-sm">
-                    {feature.title}
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {feature.description}
-                  </p>
-                </div>
+        {/* Features List */}
+        <div className="relative z-10 space-y-4 mt-auto">
+          <p className="text-white font-semibold mb-4">
+            What's included in your trial:
+          </p>
+          {features.map((feature) => (
+            <div key={feature} className="flex items-center gap-3">
+              <div className="h-6 w-6 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                <Check className="h-4 w-4 text-cyan-400" />
               </div>
-            );
-          })}
+              <span className="text-slate-300">{feature}</span>
+            </div>
+          ))}
         </div>
 
-        {/* Testimonial */}
-        <div className="relative z-10 mt-12 p-6 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-slate-300 italic">
-            "CartNudge increased our checkout completion rate by 23% in the
-            first month. The AI predictions are incredibly accurate."
-          </p>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-              SM
-            </div>
-            <div>
-              <p className="text-white font-medium text-sm">Sarah Mitchell</p>
-              <p className="text-slate-400 text-xs">
-                Head of E-commerce, TechStyle
-              </p>
-            </div>
+        {/* Stats */}
+        <div className="relative z-10 mt-12 grid grid-cols-3 gap-6">
+          <div className="text-center">
+            <p className="text-3xl font-bold text-white">23%</p>
+            <p className="text-sm text-slate-400 mt-1">Avg. conversion lift</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-white">2M+</p>
+            <p className="text-sm text-slate-400 mt-1">Nudges delivered</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-white">500+</p>
+            <p className="text-sm text-slate-400 mt-1">Happy customers</p>
           </div>
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Register Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
@@ -205,14 +186,16 @@ export default function Login() {
           </div>
 
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Create your account
+            </h2>
             <p className="text-slate-500 mt-2">
-              Sign in to your account to continue
+              Start your 14-day free trial today
             </p>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          {/* Register Form */}
+          <form onSubmit={handleRegister} className="space-y-4">
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
                 {error}
@@ -220,8 +203,26 @@ export default function Login() {
             )}
 
             <div>
+              <Label htmlFor="name" className="text-sm font-medium">
+                Full name
+              </Label>
+              <div className="relative mt-1.5">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="pl-10 h-11"
+                  autoComplete="name"
+                />
+              </div>
+            </div>
+
+            <div>
               <Label htmlFor="email" className="text-sm font-medium">
-                Email address
+                Work email
               </Label>
               <div className="relative mt-1.5">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -238,27 +239,19 @@ export default function Login() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-cyan-600 hover:text-cyan-700 font-medium"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password" className="text-sm font-medium">
+                Password
+              </Label>
               <div className="relative mt-1.5">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="Minimum 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 h-11"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -274,17 +267,22 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start space-x-2">
               <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                id="terms"
+                checked={agreeTerms}
+                onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
+                className="mt-0.5"
               />
-              <label
-                htmlFor="remember"
-                className="text-sm text-slate-600 cursor-pointer"
-              >
-                Remember me for 30 days
+              <label htmlFor="terms" className="text-sm text-slate-600 cursor-pointer">
+                I agree to the{" "}
+                <a href="#" className="text-cyan-600 hover:text-cyan-700">
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="#" className="text-cyan-600 hover:text-cyan-700">
+                  Privacy Policy
+                </a>
               </label>
             </div>
 
@@ -296,11 +294,11 @@ export default function Login() {
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Signing in...
+                  Creating account...
                 </>
               ) : (
                 <>
-                  Sign in
+                  Create account
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </>
               )}
@@ -308,28 +306,17 @@ export default function Login() {
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-500">
-            Don't have an account?{" "}
+            Already have an account?{" "}
             <Link
-              to="/register"
+              to="/login"
               className="text-cyan-600 hover:text-cyan-700 font-medium"
             >
-              Start your free trial
+              Sign in
             </Link>
           </p>
-
-          {/* Trust badges */}
-          <div className="mt-8 pt-8 border-t border-slate-200">
-            <p className="text-xs text-slate-400 text-center mb-4">
-              Trusted by leading e-commerce brands
-            </p>
-            <div className="flex items-center justify-center gap-8 opacity-50">
-              <div className="text-slate-400 font-bold text-lg">SHOPIFY</div>
-              <div className="text-slate-400 font-bold text-lg">WOO</div>
-              <div className="text-slate-400 font-bold text-lg">MAGENTO</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
+
