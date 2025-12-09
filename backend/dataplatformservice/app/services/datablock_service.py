@@ -3,8 +3,11 @@ Datablock service - business logic for datablock management with MongoDB.
 """
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
 
 from bson import ObjectId
@@ -14,104 +17,47 @@ from app.schemas.datablock import (
     DatablockCreate,
     DatablockUpdate,
     DatablockStatus,
-    DataSourceType,
     IconType,
-    FieldType,
-    SchemaFieldCreate,
 )
 
 
-# Predefined datablock templates
-PREDEFINED_TEMPLATES = [
-    {
-        "template_id": "users",
-        "name": "users",
-        "display_name": "Users",
-        "description": "Anonymous user profiles and behavioral attributes. No PII stored.",
-        "icon": IconType.USERS.value,
-        "source_type": DataSourceType.HYBRID.value,
-        "event_topic": "user.updated",
-        "default_schema": [
-            {"name": "user_id", "type": FieldType.STRING.value, "required": True, "description": "Anonymous user identifier", "is_primary_key": True},
-            {"name": "created_at", "type": FieldType.DATE.value, "required": True, "description": "Account creation date", "is_primary_key": False},
-            {"name": "segment", "type": FieldType.STRING.value, "required": False, "description": "Customer segment", "is_primary_key": False},
-            {"name": "lifetime_value", "type": FieldType.NUMBER.value, "required": False, "description": "Customer lifetime value", "is_primary_key": False},
-            {"name": "first_purchase_date", "type": FieldType.DATE.value, "required": False, "description": "Date of first purchase", "is_primary_key": False},
-            {"name": "total_orders", "type": FieldType.NUMBER.value, "required": False, "description": "Total number of orders", "is_primary_key": False},
-        ],
-    },
-    {
-        "template_id": "products",
-        "name": "products",
-        "display_name": "Products",
-        "description": "Product catalog with pricing and inventory. Typically bulk imported from your catalog system.",
-        "icon": IconType.PACKAGE.value,
-        "source_type": DataSourceType.CSV.value,
-        "event_topic": None,
-        "default_schema": [
-            {"name": "product_id", "type": FieldType.STRING.value, "required": True, "description": "Unique product identifier", "is_primary_key": True},
-            {"name": "name", "type": FieldType.STRING.value, "required": True, "description": "Product name", "is_primary_key": False},
-            {"name": "category", "type": FieldType.STRING.value, "required": True, "description": "Product category", "is_primary_key": False},
-            {"name": "price", "type": FieldType.NUMBER.value, "required": True, "description": "Current price", "is_primary_key": False},
-            {"name": "image_url", "type": FieldType.STRING.value, "required": False, "description": "Product image URL", "is_primary_key": False},
-            {"name": "is_active", "type": FieldType.BOOLEAN.value, "required": True, "description": "Product availability", "is_primary_key": False},
-        ],
-    },
-    {
-        "template_id": "cart_events",
-        "name": "cart_events",
-        "display_name": "Cart Events",
-        "description": "Real-time cart activity including add, remove, and checkout events. Essential for purchase prediction.",
-        "icon": IconType.CART.value,
-        "source_type": DataSourceType.EVENT.value,
-        "event_topic": "cart.*",
-        "default_schema": [
-            {"name": "event_id", "type": FieldType.STRING.value, "required": True, "description": "Unique event identifier", "is_primary_key": True},
-            {"name": "user_id", "type": FieldType.STRING.value, "required": True, "description": "Anonymous user identifier", "is_primary_key": False},
-            {"name": "session_id", "type": FieldType.STRING.value, "required": True, "description": "Session identifier", "is_primary_key": False},
-            {"name": "event_type", "type": FieldType.STRING.value, "required": True, "description": "Type: cart_add, cart_remove, checkout_start, purchase", "is_primary_key": False},
-            {"name": "product_id", "type": FieldType.STRING.value, "required": True, "description": "Product involved", "is_primary_key": False},
-            {"name": "quantity", "type": FieldType.NUMBER.value, "required": True, "description": "Quantity", "is_primary_key": False},
-            {"name": "cart_total", "type": FieldType.NUMBER.value, "required": False, "description": "Current cart total", "is_primary_key": False},
-            {"name": "timestamp", "type": FieldType.DATE.value, "required": True, "description": "Event timestamp", "is_primary_key": False},
-        ],
-    },
-    {
-        "template_id": "page_views",
-        "name": "page_views",
-        "display_name": "Page Views",
-        "description": "Browsing behavior and page interactions. Used for engagement scoring.",
-        "icon": IconType.CURSOR.value,
-        "source_type": DataSourceType.EVENT.value,
-        "event_topic": "page.view",
-        "default_schema": [
-            {"name": "event_id", "type": FieldType.STRING.value, "required": True, "description": "Unique event identifier", "is_primary_key": True},
-            {"name": "user_id", "type": FieldType.STRING.value, "required": True, "description": "Anonymous user identifier", "is_primary_key": False},
-            {"name": "session_id", "type": FieldType.STRING.value, "required": True, "description": "Session identifier", "is_primary_key": False},
-            {"name": "page_type", "type": FieldType.STRING.value, "required": True, "description": "Type: home, product, category, cart, checkout", "is_primary_key": False},
-            {"name": "product_id", "type": FieldType.STRING.value, "required": False, "description": "Product ID if on product page", "is_primary_key": False},
-            {"name": "duration_seconds", "type": FieldType.NUMBER.value, "required": False, "description": "Time spent on page", "is_primary_key": False},
-            {"name": "timestamp", "type": FieldType.DATE.value, "required": True, "description": "Event timestamp", "is_primary_key": False},
-        ],
-    },
-    {
-        "template_id": "orders",
-        "name": "orders",
-        "display_name": "Orders",
-        "description": "Completed purchase orders. Can be synced via events or bulk imported.",
-        "icon": IconType.CREDIT_CARD.value,
-        "source_type": DataSourceType.HYBRID.value,
-        "event_topic": "order.created",
-        "default_schema": [
-            {"name": "order_id", "type": FieldType.STRING.value, "required": True, "description": "Unique order identifier", "is_primary_key": True},
-            {"name": "user_id", "type": FieldType.STRING.value, "required": True, "description": "Anonymous user identifier", "is_primary_key": False},
-            {"name": "total_amount", "type": FieldType.NUMBER.value, "required": True, "description": "Order total", "is_primary_key": False},
-            {"name": "status", "type": FieldType.STRING.value, "required": True, "description": "Order status", "is_primary_key": False},
-            {"name": "item_count", "type": FieldType.NUMBER.value, "required": True, "description": "Number of items in order", "is_primary_key": False},
-            {"name": "created_at", "type": FieldType.DATE.value, "required": True, "description": "Order creation date", "is_primary_key": False},
-        ],
-    },
-]
+# Path to the templates data folder
+DATA_DIR = Path(__file__).parent.parent.parent / "data" / "templates"
+
+
+@lru_cache(maxsize=1)
+def _load_datablock_templates() -> List[dict]:
+    """
+    Load predefined datablock templates from JSON file.
+    
+    Cached to avoid reading the file on every request.
+    Call _load_datablock_templates.cache_clear() to reload.
+    """
+    templates_file = DATA_DIR / "datablocks.json"
+    
+    if not templates_file.exists():
+        return []
+    
+    with open(templates_file, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def get_predefined_templates() -> List[dict]:
+    """Get all predefined datablock templates."""
+    return _load_datablock_templates()
+
+
+def get_template_by_id(template_id: str) -> Optional[dict]:
+    """Get a specific predefined template by ID."""
+    for template in _load_datablock_templates():
+        if template["template_id"] == template_id:
+            return template
+    return None
+
+
+def reload_templates() -> None:
+    """Reload templates from file (clears cache)."""
+    _load_datablock_templates.cache_clear()
 
 
 class DatablockService:
@@ -127,14 +73,11 @@ class DatablockService:
     
     def get_predefined_templates(self) -> List[dict]:
         """Get all predefined datablock templates."""
-        return PREDEFINED_TEMPLATES
+        return get_predefined_templates()
     
     def get_template_by_id(self, template_id: str) -> Optional[dict]:
         """Get a specific predefined template by ID."""
-        for template in PREDEFINED_TEMPLATES:
-            if template["template_id"] == template_id:
-                return template
-        return None
+        return get_template_by_id(template_id)
     
     # -------------------------------------------------------------------------
     # Datablock CRUD Operations
@@ -339,4 +282,3 @@ class DatablockService:
             "name": name,
         })
         return count > 0
-

@@ -7,7 +7,15 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.core.dependencies import Database
+from app.core.dependencies import (
+    Database,
+    RequireRead,
+    RequireCreate,
+    RequireUpdate,
+    RequireDelete,
+    RequireDeploy,
+    CurrentUser,
+)
 from app.services.datablock_service import DatablockService
 from app.schemas.datablock import (
     DatablockCreate,
@@ -21,7 +29,7 @@ router = APIRouter()
 
 
 # -----------------------------------------------------------------------------
-# Predefined Templates
+# Predefined Templates (Public - no auth required)
 # -----------------------------------------------------------------------------
 
 @router.get(
@@ -58,18 +66,19 @@ async def get_template(template_id: str, db: Database):
 
 
 # -----------------------------------------------------------------------------
-# Datablock CRUD
+# Datablock CRUD (Protected - requires project membership)
 # -----------------------------------------------------------------------------
 
 @router.get(
     "/projects/{project_id}/datablocks",
     response_model=DatablockListResponse,
     summary="List project datablocks",
-    description="Get all datablocks for a project.",
+    description="Get all datablocks for a project. Requires READ permission.",
 )
 async def list_datablocks(
     project_id: str,
     db: Database,
+    user: RequireRead,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
 ):
@@ -88,12 +97,13 @@ async def list_datablocks(
     response_model=DatablockResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a datablock",
-    description="Create a new custom datablock.",
+    description="Create a new custom datablock. Requires CREATE permission.",
 )
 async def create_datablock(
     project_id: str,
     data: DatablockCreate,
     db: Database,
+    user: RequireCreate,
 ):
     """Create a new custom datablock."""
     service = DatablockService(db)
@@ -114,12 +124,13 @@ async def create_datablock(
     response_model=DatablockResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create datablock from template",
-    description="Create a datablock from a predefined template.",
+    description="Create a datablock from a predefined template. Requires CREATE permission.",
 )
 async def create_from_template(
     project_id: str,
     template_id: str,
     db: Database,
+    user: RequireCreate,
 ):
     """Create a datablock from a predefined template."""
     service = DatablockService(db)
@@ -153,12 +164,13 @@ async def create_from_template(
     "/projects/{project_id}/datablocks/{datablock_id}",
     response_model=DatablockResponse,
     summary="Get a datablock",
-    description="Get a specific datablock by ID.",
+    description="Get a specific datablock by ID. Requires READ permission.",
 )
 async def get_datablock(
     project_id: str,
     datablock_id: str,
     db: Database,
+    user: RequireRead,
 ):
     """Get a specific datablock."""
     service = DatablockService(db)
@@ -177,13 +189,14 @@ async def get_datablock(
     "/projects/{project_id}/datablocks/{datablock_id}",
     response_model=DatablockResponse,
     summary="Update a datablock",
-    description="Update a datablock's configuration.",
+    description="Update a datablock's configuration. Requires UPDATE permission.",
 )
 async def update_datablock(
     project_id: str,
     datablock_id: str,
     data: DatablockUpdate,
     db: Database,
+    user: RequireUpdate,
 ):
     """Update a datablock."""
     service = DatablockService(db)
@@ -202,12 +215,13 @@ async def update_datablock(
     "/projects/{project_id}/datablocks/{datablock_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a datablock",
-    description="Delete a datablock.",
+    description="Delete a datablock. Requires DELETE permission.",
 )
 async def delete_datablock(
     project_id: str,
     datablock_id: str,
     db: Database,
+    user: RequireDelete,
 ):
     """Delete a datablock."""
     service = DatablockService(db)
@@ -223,19 +237,20 @@ async def delete_datablock(
 
 
 # -----------------------------------------------------------------------------
-# Status Updates
+# Status Updates (Deployment permissions required)
 # -----------------------------------------------------------------------------
 
 @router.post(
     "/projects/{project_id}/datablocks/{datablock_id}/mark-ready",
     response_model=DatablockResponse,
     summary="Mark datablock ready for deployment",
-    description="Mark a configured datablock as ready for deployment.",
+    description="Mark a configured datablock as ready for deployment. Requires DEPLOY permission.",
 )
 async def mark_ready_for_deployment(
     project_id: str,
     datablock_id: str,
     db: Database,
+    user: RequireDeploy,
 ):
     """Mark a datablock as ready for deployment."""
     service = DatablockService(db)
@@ -254,12 +269,13 @@ async def mark_ready_for_deployment(
     "/projects/{project_id}/datablocks/{datablock_id}/mark-deployed",
     response_model=DatablockResponse,
     summary="Mark datablock as deployed",
-    description="Mark a datablock as deployed (called after successful deployment).",
+    description="Mark a datablock as deployed (called after successful deployment). Requires DEPLOY permission.",
 )
 async def mark_deployed(
     project_id: str,
     datablock_id: str,
     db: Database,
+    user: RequireDeploy,
 ):
     """Mark a datablock as deployed."""
     service = DatablockService(db)
@@ -272,4 +288,3 @@ async def mark_deployed(
         )
     
     return DatablockResponse.model_validate(datablock)
-

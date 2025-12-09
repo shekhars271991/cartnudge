@@ -1,0 +1,289 @@
+[
+  {
+    "template_id": "users",
+    "name": "users",
+    "display_name": "Users",
+    "description": "Anonymous user profiles and behavioral attributes. No PII stored.",
+    "icon": "users",
+    "source_type": "hybrid",
+    "event_topic": "user.updated",
+    "default_schema": [
+      {
+        "name": "user_id",
+        "type": "string",
+        "required": true,
+        "description": "Anonymous user identifier",
+        "is_primary_key": true
+      },
+      {
+        "name": "created_at",
+        "type": "date",
+        "required": true,
+        "description": "Account creation date",
+        "is_primary_key": false
+      },
+      {
+        "name": "segment",
+        "type": "string",
+        "required": false,
+        "description": "Customer segment",
+        "is_primary_key": false
+      },
+      {
+        "name": "lifetime_value",
+        "type": "number",
+        "required": false,
+        "description": "Customer lifetime value",
+        "is_primary_key": false
+      },
+      {
+        "name": "first_purchase_date",
+        "type": "date",
+        "required": false,
+        "description": "Date of first purchase",
+        "is_primary_key": false
+      },
+      {
+        "name": "total_orders",
+        "type": "number",
+        "required": false,
+        "description": "Total number of orders",
+        "is_primary_key": false
+      }
+    ]
+  },
+  {
+    "template_id": "products",
+    "name": "products",
+    "display_name": "Products",
+    "description": "Product catalog with pricing and inventory. Typically bulk imported from your catalog system.",
+    "icon": "package",
+    "source_type": "csv",
+    "event_topic": null,
+    "default_schema": [
+      {
+        "name": "product_id",
+        "type": "string",
+        "required": true,
+        "description": "Unique product identifier",
+        "is_primary_key": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": true,
+        "description": "Product name",
+        "is_primary_key": false
+      },
+      {
+        "name": "category",
+        "type": "string",
+        "required": true,
+        "description": "Product category",
+        "is_primary_key": false
+      },
+      {
+        "name": "price",
+        "type": "number",
+        "required": true,
+        "description": "Current price",
+        "is_primary_key": false
+      },
+      {
+        "name": "image_url",
+        "type": "string",
+        "required": false,
+        "description": "Product image URL",
+        "is_primary_key": false
+      },
+      {
+        "name": "is_active",
+        "type": "boolean",
+        "required": true,
+        "description": "Product availability",
+        "is_primary_key": false
+      }
+    ]
+  },
+  {
+    "template_id": "cart_events",
+    "name": "cart_events",
+    "display_name": "Cart Events",
+    "description": "Real-time cart activity including add, remove, and checkout events. Essential for purchase prediction.",
+    "icon": "cart",
+    "source_type": "event",
+    "event_topic": "cart.*",
+    "default_schema": [
+      {
+        "name": "event_id",
+        "type": "string",
+        "required": true,
+        "description": "Unique event identifier",
+        "is_primary_key": true
+      },
+      {
+        "name": "user_id",
+        "type": "string",
+        "required": true,
+        "description": "Anonymous user identifier",
+        "is_primary_key": false
+      },
+      {
+        "name": "session_id",
+        "type": "string",
+        "required": true,
+        "description": "Session identifier",
+        "is_primary_key": false
+      },
+      {
+        "name": "event_type",
+        "type": "string",
+        "required": true,
+        "description": "Type: cart_add, cart_remove, checkout_start, purchase",
+        "is_primary_key": false
+      },
+      {
+        "name": "product_id",
+        "type": "string",
+        "required": true,
+        "description": "Product involved",
+        "is_primary_key": false
+      },
+      {
+        "name": "quantity",
+        "type": "number",
+        "required": true,
+        "description": "Quantity",
+        "is_primary_key": false
+      },
+      {
+        "name": "cart_total",
+        "type": "number",
+        "required": false,
+        "description": "Current cart total",
+        "is_primary_key": false
+      },
+      {
+        "name": "timestamp",
+        "type": "date",
+        "required": true,
+        "description": "Event timestamp",
+        "is_primary_key": false
+      }
+    ]
+  },
+  {
+    "template_id": "page_views",
+    "name": "page_views",
+    "display_name": "Page Views",
+    "description": "Browsing behavior and page interactions. Used for engagement scoring.",
+    "icon": "cursor",
+    "source_type": "event",
+    "event_topic": "page.view",
+    "default_schema": [
+      {
+        "name": "event_id",
+        "type": "string",
+        "required": true,
+        "description": "Unique event identifier",
+        "is_primary_key": true
+      },
+      {
+        "name": "user_id",
+        "type": "string",
+        "required": true,
+        "description": "Anonymous user identifier",
+        "is_primary_key": false
+      },
+      {
+        "name": "session_id",
+        "type": "string",
+        "required": true,
+        "description": "Session identifier",
+        "is_primary_key": false
+      },
+      {
+        "name": "page_type",
+        "type": "string",
+        "required": true,
+        "description": "Type: home, product, category, cart, checkout",
+        "is_primary_key": false
+      },
+      {
+        "name": "product_id",
+        "type": "string",
+        "required": false,
+        "description": "Product ID if on product page",
+        "is_primary_key": false
+      },
+      {
+        "name": "duration_seconds",
+        "type": "number",
+        "required": false,
+        "description": "Time spent on page",
+        "is_primary_key": false
+      },
+      {
+        "name": "timestamp",
+        "type": "date",
+        "required": true,
+        "description": "Event timestamp",
+        "is_primary_key": false
+      }
+    ]
+  },
+  {
+    "template_id": "orders",
+    "name": "orders",
+    "display_name": "Orders",
+    "description": "Completed purchase orders. Can be synced via events or bulk imported.",
+    "icon": "credit-card",
+    "source_type": "hybrid",
+    "event_topic": "order.created",
+    "default_schema": [
+      {
+        "name": "order_id",
+        "type": "string",
+        "required": true,
+        "description": "Unique order identifier",
+        "is_primary_key": true
+      },
+      {
+        "name": "user_id",
+        "type": "string",
+        "required": true,
+        "description": "Anonymous user identifier",
+        "is_primary_key": false
+      },
+      {
+        "name": "total_amount",
+        "type": "number",
+        "required": true,
+        "description": "Order total",
+        "is_primary_key": false
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "required": true,
+        "description": "Order status",
+        "is_primary_key": false
+      },
+      {
+        "name": "item_count",
+        "type": "number",
+        "required": true,
+        "description": "Number of items in order",
+        "is_primary_key": false
+      },
+      {
+        "name": "created_at",
+        "type": "date",
+        "required": true,
+        "description": "Order creation date",
+        "is_primary_key": false
+      }
+    ]
+  }
+]
+

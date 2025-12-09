@@ -4,7 +4,14 @@ Pipeline API endpoints.
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.core.dependencies import Database
+from app.core.dependencies import (
+    Database,
+    RequireRead,
+    RequireCreate,
+    RequireUpdate,
+    RequireDelete,
+    RequireDeploy,
+)
 from app.services.pipeline_service import PipelineService
 from app.schemas.pipeline import (
     PipelineCreate,
@@ -13,7 +20,6 @@ from app.schemas.pipeline import (
     PipelineListResponse,
     EventCreate,
     EventUpdate,
-    EventResponse,
     WebhookInfo,
 )
 
@@ -28,10 +34,11 @@ router = APIRouter()
 async def list_pipelines(
     project_id: str,
     db: Database,
+    user: RequireRead,
     skip: int = 0,
     limit: int = 100,
 ):
-    """List all pipelines for a project."""
+    """List all pipelines for a project. Requires READ permission."""
     service = PipelineService(db)
     pipelines, total = await service.get_all_for_project(project_id, skip=skip, limit=limit)
     
@@ -50,8 +57,9 @@ async def create_pipeline(
     project_id: str,
     data: PipelineCreate,
     db: Database,
+    user: RequireCreate,
 ):
-    """Create a new pipeline."""
+    """Create a new pipeline. Requires CREATE permission."""
     service = PipelineService(db)
     pipeline = await service.create(project_id, data)
     return PipelineResponse.model_validate(pipeline)
@@ -62,8 +70,9 @@ async def get_pipeline(
     project_id: str,
     pipeline_id: str,
     db: Database,
+    user: RequireRead,
 ):
-    """Get a pipeline by ID."""
+    """Get a pipeline by ID. Requires READ permission."""
     service = PipelineService(db)
     pipeline = await service.get_by_id(pipeline_id, project_id)
     
@@ -82,8 +91,9 @@ async def update_pipeline(
     pipeline_id: str,
     data: PipelineUpdate,
     db: Database,
+    user: RequireUpdate,
 ):
-    """Update a pipeline."""
+    """Update a pipeline. Requires UPDATE permission."""
     service = PipelineService(db)
     pipeline = await service.update(pipeline_id, project_id, data)
     
@@ -104,8 +114,9 @@ async def delete_pipeline(
     project_id: str,
     pipeline_id: str,
     db: Database,
+    user: RequireDelete,
 ):
-    """Delete a pipeline."""
+    """Delete a pipeline. Requires DELETE permission."""
     service = PipelineService(db)
     deleted = await service.delete(pipeline_id, project_id)
     
@@ -124,8 +135,9 @@ async def activate_pipeline(
     project_id: str,
     pipeline_id: str,
     db: Database,
+    user: RequireDeploy,
 ):
-    """Activate a pipeline."""
+    """Activate a pipeline. Requires DEPLOY permission."""
     service = PipelineService(db)
     pipeline = await service.activate(pipeline_id, project_id)
     
@@ -146,8 +158,9 @@ async def deactivate_pipeline(
     project_id: str,
     pipeline_id: str,
     db: Database,
+    user: RequireDeploy,
 ):
-    """Deactivate a pipeline."""
+    """Deactivate a pipeline. Requires DEPLOY permission."""
     service = PipelineService(db)
     pipeline = await service.deactivate(pipeline_id, project_id)
     
@@ -172,8 +185,9 @@ async def get_webhook(
     project_id: str,
     pipeline_id: str,
     db: Database,
+    user: RequireRead,
 ):
-    """Get webhook information for a pipeline."""
+    """Get webhook information for a pipeline. Requires READ permission."""
     service = PipelineService(db)
     secret = await service.get_webhook_secret(pipeline_id, project_id)
     
@@ -197,8 +211,9 @@ async def rotate_webhook_secret(
     project_id: str,
     pipeline_id: str,
     db: Database,
+    user: RequireDeploy,
 ):
-    """Rotate webhook secret for a pipeline."""
+    """Rotate webhook secret for a pipeline. Requires DEPLOY permission."""
     service = PipelineService(db)
     new_secret = await service.rotate_webhook_secret(pipeline_id, project_id)
     
@@ -227,8 +242,9 @@ async def add_event(
     pipeline_id: str,
     data: EventCreate,
     db: Database,
+    user: RequireCreate,
 ):
-    """Add an event to a pipeline."""
+    """Add an event to a pipeline. Requires CREATE permission."""
     service = PipelineService(db)
     pipeline = await service.add_event(pipeline_id, project_id, data)
     
@@ -251,8 +267,9 @@ async def update_event(
     event_name: str,
     data: EventUpdate,
     db: Database,
+    user: RequireUpdate,
 ):
-    """Update an event in a pipeline."""
+    """Update an event in a pipeline. Requires UPDATE permission."""
     service = PipelineService(db)
     pipeline = await service.update_event(pipeline_id, project_id, event_name, data)
     
@@ -274,8 +291,9 @@ async def delete_event(
     pipeline_id: str,
     event_name: str,
     db: Database,
+    user: RequireDelete,
 ):
-    """Delete an event from a pipeline."""
+    """Delete an event from a pipeline. Requires DELETE permission."""
     service = PipelineService(db)
     pipeline = await service.delete_event(pipeline_id, project_id, event_name)
     

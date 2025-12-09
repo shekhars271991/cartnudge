@@ -48,6 +48,14 @@ class PermissionsResponse(BaseModel):
     permissions: List[str]
 
 
+class MembershipResponse(BaseModel):
+    """Response for membership check."""
+    is_member: bool
+    role: Optional[str] = None
+    user_id: Optional[str] = None
+    project_id: Optional[str] = None
+
+
 # Permission definitions by role
 ROLE_PERMISSIONS = {
     "owner": ["*"],
@@ -155,3 +163,38 @@ async def get_permissions(
     permissions = ROLE_PERMISSIONS.get(role, [])
     
     return PermissionsResponse(role=role, permissions=permissions)
+
+
+@router.get(
+    "/projects/{project_id}/members/{user_id}",
+    response_model=MembershipResponse,
+    summary="Check project membership",
+    description="Check if a user is a member of a project and get their role (internal use only).",
+)
+async def check_membership(
+    project_id: str,
+    user_id: str,
+    db: Database,
+):
+    """
+    Check if a user is a member of a project.
+    
+    Used by other services (e.g., Data Platform Service) to verify
+    project access and get the user's role.
+    """
+    service = ProjectService(db)
+    role = await service.get_user_role(project_id, user_id)
+    
+    if not role:
+        return MembershipResponse(
+            is_member=False,
+            project_id=project_id,
+            user_id=user_id,
+        )
+    
+    return MembershipResponse(
+        is_member=True,
+        role=role,
+        project_id=project_id,
+        user_id=user_id,
+    )

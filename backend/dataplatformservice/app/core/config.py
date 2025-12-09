@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     aerospike_hosts: str = "localhost:3010"
     aerospike_namespace: str = "features"
     
+    # JWT Settings (must match Identity Service)
+    jwt_secret_key: str = "your-super-secret-key-change-in-production"
+    jwt_algorithm: str = "HS256"
+    
+    # Identity Service (for authorization checks)
+    identity_service_url: str = "http://localhost:8001"
+    
     # CORS
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     
@@ -48,6 +55,7 @@ class Settings(BaseSettings):
         for host in self.aerospike_hosts.split(","):
             parts = host.strip().split(":")
             hosts.append((parts[0], int(parts[1]) if len(parts) > 1 else 3000))
+        return hosts
 
 
 @lru_cache

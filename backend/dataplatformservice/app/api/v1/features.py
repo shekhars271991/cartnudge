@@ -4,7 +4,14 @@ Feature API endpoints.
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.core.dependencies import Database
+from app.core.dependencies import (
+    Database,
+    RequireRead,
+    RequireCreate,
+    RequireUpdate,
+    RequireDelete,
+    RequireDeploy,
+)
 from app.services.feature_service import FeatureService
 from app.schemas.feature import (
     FeatureCreate,
@@ -20,10 +27,11 @@ router = APIRouter()
 async def list_features(
     project_id: str,
     db: Database,
+    user: RequireRead,
     skip: int = 0,
     limit: int = 100,
 ):
-    """List all feature definitions for a project."""
+    """List all feature definitions for a project. Requires READ permission."""
     service = FeatureService(db)
     features, total = await service.get_all_for_project(project_id, skip=skip, limit=limit)
     
@@ -42,8 +50,9 @@ async def create_feature(
     project_id: str,
     data: FeatureCreate,
     db: Database,
+    user: RequireCreate,
 ):
-    """Create a new feature definition."""
+    """Create a new feature definition. Requires CREATE permission."""
     service = FeatureService(db)
     feature = await service.create(project_id, data)
     return FeatureResponse.model_validate(feature)
@@ -54,8 +63,9 @@ async def get_feature(
     project_id: str,
     feature_id: str,
     db: Database,
+    user: RequireRead,
 ):
-    """Get a feature by ID."""
+    """Get a feature by ID. Requires READ permission."""
     service = FeatureService(db)
     feature = await service.get_by_id(feature_id, project_id)
     
@@ -74,8 +84,9 @@ async def update_feature(
     feature_id: str,
     data: FeatureUpdate,
     db: Database,
+    user: RequireUpdate,
 ):
-    """Update a feature."""
+    """Update a feature. Requires UPDATE permission."""
     service = FeatureService(db)
     feature = await service.update(feature_id, project_id, data)
     
@@ -96,8 +107,9 @@ async def delete_feature(
     project_id: str,
     feature_id: str,
     db: Database,
+    user: RequireDelete,
 ):
-    """Delete a feature."""
+    """Delete a feature. Requires DELETE permission."""
     service = FeatureService(db)
     deleted = await service.delete(feature_id, project_id)
     
@@ -116,8 +128,9 @@ async def enable_feature(
     project_id: str,
     feature_id: str,
     db: Database,
+    user: RequireDeploy,
 ):
-    """Enable a feature."""
+    """Enable a feature. Requires DEPLOY permission."""
     service = FeatureService(db)
     feature = await service.enable(feature_id, project_id)
     
@@ -138,8 +151,9 @@ async def disable_feature(
     project_id: str,
     feature_id: str,
     db: Database,
+    user: RequireDeploy,
 ):
-    """Disable a feature."""
+    """Disable a feature. Requires DEPLOY permission."""
     service = FeatureService(db)
     feature = await service.disable(feature_id, project_id)
     
@@ -150,4 +164,3 @@ async def disable_feature(
         )
     
     return FeatureResponse.model_validate(feature)
-

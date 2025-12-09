@@ -5,11 +5,27 @@
 		"description": "API collection for CartNudge Data Platform Service - manages datablocks, pipelines, and features for real-time ML feature engineering.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	},
 	"variable": [
 		{
 			"key": "base_url",
 			"value": "http://localhost:8010",
 			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string",
+			"description": "JWT token from Identity Service login"
 		},
 		{
 			"key": "project_id",
