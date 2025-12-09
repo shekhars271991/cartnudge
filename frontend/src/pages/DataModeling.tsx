@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -43,11 +43,9 @@ import {
     Trash2,
     Edit2,
     Upload,
-    Code,
     Copy,
     Check,
     FileUp,
-    X,
     CheckCircle2,
     Clock,
     Zap,
@@ -55,152 +53,24 @@ import {
     RefreshCw,
     Settings2,
     ChevronRight,
-    AlertCircle,
     Layers,
+    Loader2,
+    AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProject } from "@/contexts/ProjectContext";
 import { EmptyProjectState } from "@/components/EmptyProjectState";
-
-// Types
-type DataSourceType = "event" | "csv" | "api" | "hybrid";
-type DatablockStatus = "not_configured" | "configured" | "deployed" | "error";
-
-interface SchemaField {
-    id: string;
-    name: string;
-    type: "string" | "number" | "boolean" | "date" | "email" | "array" | "object";
-    required: boolean;
-    description: string;
-    isPrimaryKey: boolean;
-}
-
-interface Datablock {
-    id: string;
-    name: string;
-    displayName: string;
-    description: string;
-    icon: "users" | "package" | "cart" | "cursor" | "credit-card" | "database";
-    sourceType: DataSourceType;
-    status: DatablockStatus;
-    isPredefined: boolean;
-    schema: SchemaField[];
-    recordCount: number;
-    lastSync: string | null;
-    eventTopic?: string;
-    apiEndpoint?: string;
-}
-
-// Predefined datablocks for e-commerce nudge platform
-const predefinedDatablocks: Datablock[] = [
-    {
-        id: "users",
-        name: "users",
-        displayName: "Users",
-        description: "Anonymous user profiles and behavioral attributes. No PII stored.",
-        icon: "users",
-        sourceType: "hybrid",
-        status: "not_configured",
-        isPredefined: true,
-        schema: [
-            { id: "u1", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: true },
-            { id: "u2", name: "created_at", type: "date", required: true, description: "Account creation date", isPrimaryKey: false },
-            { id: "u3", name: "segment", type: "string", required: false, description: "Customer segment", isPrimaryKey: false },
-            { id: "u4", name: "lifetime_value", type: "number", required: false, description: "Customer lifetime value", isPrimaryKey: false },
-            { id: "u5", name: "first_purchase_date", type: "date", required: false, description: "Date of first purchase", isPrimaryKey: false },
-            { id: "u6", name: "total_orders", type: "number", required: false, description: "Total number of orders", isPrimaryKey: false },
-        ],
-        recordCount: 0,
-        lastSync: null,
-        eventTopic: "user.updated",
-    },
-    {
-        id: "products",
-        name: "products",
-        displayName: "Products",
-        description: "Product catalog with pricing and inventory. Typically bulk imported from your catalog system.",
-        icon: "package",
-        sourceType: "csv",
-        status: "not_configured",
-        isPredefined: true,
-        schema: [
-            { id: "p1", name: "product_id", type: "string", required: true, description: "Unique product identifier", isPrimaryKey: true },
-            { id: "p2", name: "name", type: "string", required: true, description: "Product name", isPrimaryKey: false },
-            { id: "p3", name: "category", type: "string", required: true, description: "Product category", isPrimaryKey: false },
-            { id: "p4", name: "price", type: "number", required: true, description: "Current price", isPrimaryKey: false },
-            { id: "p5", name: "image_url", type: "string", required: false, description: "Product image URL", isPrimaryKey: false },
-            { id: "p6", name: "is_active", type: "boolean", required: true, description: "Product availability", isPrimaryKey: false },
-        ],
-        recordCount: 0,
-        lastSync: null,
-    },
-    {
-        id: "cart_events",
-        name: "cart_events",
-        displayName: "Cart Events",
-        description: "Real-time cart activity including add, remove, and checkout events. Essential for purchase prediction.",
-        icon: "cart",
-        sourceType: "event",
-        status: "not_configured",
-        isPredefined: true,
-        schema: [
-            { id: "c1", name: "event_id", type: "string", required: true, description: "Unique event identifier", isPrimaryKey: true },
-            { id: "c2", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: false },
-            { id: "c3", name: "session_id", type: "string", required: true, description: "Session identifier", isPrimaryKey: false },
-            { id: "c4", name: "event_type", type: "string", required: true, description: "Type: cart_add, cart_remove, checkout_start, purchase", isPrimaryKey: false },
-            { id: "c5", name: "product_id", type: "string", required: true, description: "Product involved", isPrimaryKey: false },
-            { id: "c6", name: "quantity", type: "number", required: true, description: "Quantity", isPrimaryKey: false },
-            { id: "c7", name: "cart_total", type: "number", required: false, description: "Current cart total", isPrimaryKey: false },
-            { id: "c8", name: "timestamp", type: "date", required: true, description: "Event timestamp", isPrimaryKey: false },
-        ],
-        recordCount: 0,
-        lastSync: null,
-        eventTopic: "cart.*",
-    },
-    {
-        id: "page_views",
-        name: "page_views",
-        displayName: "Page Views",
-        description: "Browsing behavior and page interactions. Used for engagement scoring.",
-        icon: "cursor",
-        sourceType: "event",
-        status: "not_configured",
-        isPredefined: true,
-        schema: [
-            { id: "pv1", name: "event_id", type: "string", required: true, description: "Unique event identifier", isPrimaryKey: true },
-            { id: "pv2", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: false },
-            { id: "pv3", name: "session_id", type: "string", required: true, description: "Session identifier", isPrimaryKey: false },
-            { id: "pv4", name: "page_type", type: "string", required: true, description: "Type: home, product, category, cart, checkout", isPrimaryKey: false },
-            { id: "pv5", name: "product_id", type: "string", required: false, description: "Product ID if on product page", isPrimaryKey: false },
-            { id: "pv6", name: "duration_seconds", type: "number", required: false, description: "Time spent on page", isPrimaryKey: false },
-            { id: "pv7", name: "timestamp", type: "date", required: true, description: "Event timestamp", isPrimaryKey: false },
-        ],
-        recordCount: 0,
-        lastSync: null,
-        eventTopic: "page.view",
-    },
-    {
-        id: "orders",
-        name: "orders",
-        displayName: "Orders",
-        description: "Completed purchase orders. Can be synced via events or bulk imported.",
-        icon: "credit-card",
-        sourceType: "hybrid",
-        status: "not_configured",
-        isPredefined: true,
-        schema: [
-            { id: "o1", name: "order_id", type: "string", required: true, description: "Unique order identifier", isPrimaryKey: true },
-            { id: "o2", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: false },
-            { id: "o3", name: "total_amount", type: "number", required: true, description: "Order total", isPrimaryKey: false },
-            { id: "o4", name: "status", type: "string", required: true, description: "Order status", isPrimaryKey: false },
-            { id: "o5", name: "item_count", type: "number", required: true, description: "Number of items in order", isPrimaryKey: false },
-            { id: "o6", name: "created_at", type: "date", required: true, description: "Order creation date", isPrimaryKey: false },
-        ],
-        recordCount: 0,
-        lastSync: null,
-        eventTopic: "order.created",
-    },
-];
+import { datablocksApi } from "@/lib/api/dataplatform";
+import type {
+    Datablock,
+    DatablockTemplate,
+    DatablockCreate,
+    DatablockUpdate,
+    DataSourceType,
+    DatablockStatus,
+    SchemaField,
+    IconType,
+} from "@/lib/api/dataplatform/types";
 
 // Source type config
 const sourceTypeConfig: Record<DataSourceType, { label: string; description: string; icon: typeof Zap; color: string }> = {
@@ -233,8 +103,13 @@ const sourceTypeConfig: Record<DataSourceType, { label: string; description: str
 export default function DataModeling() {
     const { selectedProject } = useProject();
     
-    // State
-    const [datablocks, setDatablocks] = useState<Datablock[]>(predefinedDatablocks);
+    // Data state
+    const [templates, setTemplates] = useState<DatablockTemplate[]>([]);
+    const [datablocks, setDatablocks] = useState<Datablock[]>([]);
+    
+    // UI state
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [selectedDatablock, setSelectedDatablock] = useState<Datablock | null>(null);
     const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -242,6 +117,7 @@ export default function DataModeling() {
     const [isEditingSchema, setIsEditingSchema] = useState(false);
     const [activeTab, setActiveTab] = useState<"schema" | "ingest">("schema");
     const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     
     // New datablock state
     const [newDatablock, setNewDatablock] = useState({
@@ -250,6 +126,41 @@ export default function DataModeling() {
         description: "",
         sourceType: "event" as DataSourceType,
     });
+
+    // Load templates on mount
+    useEffect(() => {
+        const loadTemplates = async () => {
+            try {
+                const templatesData = await datablocksApi.listTemplates();
+                setTemplates(templatesData);
+            } catch (err) {
+                console.error("Failed to load templates:", err);
+            }
+        };
+        loadTemplates();
+    }, []);
+
+    // Load datablocks when project changes
+    const loadDatablocks = useCallback(async () => {
+        if (!selectedProject) return;
+        
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            const response = await datablocksApi.list(selectedProject.id);
+            setDatablocks(response.items);
+        } catch (err: unknown) {
+            console.error("Failed to load datablocks:", err);
+            setError("Failed to load datablocks");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [selectedProject]);
+
+    useEffect(() => {
+        loadDatablocks();
+    }, [loadDatablocks]);
 
     // Show empty state if no project selected
     if (!selectedProject) {
@@ -261,7 +172,7 @@ export default function DataModeling() {
         );
     }
 
-    const getIcon = (icon: Datablock["icon"]) => {
+    const getIcon = (icon: IconType) => {
         const iconMap = {
             users: Users,
             package: Package,
@@ -270,40 +181,79 @@ export default function DataModeling() {
             "credit-card": CreditCard,
             database: Database,
         };
-        const Icon = iconMap[icon];
+        const Icon = iconMap[icon] || Database;
         return <Icon className="h-5 w-5" />;
     };
 
     const getStatusBadge = (status: DatablockStatus) => {
         const config = {
             not_configured: { label: "Not Configured", class: "bg-slate-100 text-slate-600" },
-            configured: { label: "Ready to Deploy", class: "bg-amber-100 text-amber-700" },
+            configured: { label: "Configured", class: "bg-blue-100 text-blue-700" },
+            ready_for_deployment: { label: "Ready to Deploy", class: "bg-amber-100 text-amber-700" },
             deployed: { label: "Deployed", class: "bg-emerald-100 text-emerald-700" },
             error: { label: "Error", class: "bg-red-100 text-red-700" },
         };
-        return <Badge className={config[status].class}>{config[status].label}</Badge>;
+        const statusConfig = config[status] || config.not_configured;
+        return <Badge className={statusConfig.class}>{statusConfig.label}</Badge>;
     };
 
     const handleOpenConfig = (datablock: Datablock) => {
         setSelectedDatablock(datablock);
-        setEditingSchema([...datablock.schema]);
+        setEditingSchema([...datablock.schema_fields]);
         setIsEditingSchema(false);
         setActiveTab("schema");
         setIsConfigDrawerOpen(true);
     };
 
-    const handleMarkConfigured = (datablockId: string) => {
-        setDatablocks(datablocks.map(db =>
-            db.id === datablockId ? { ...db, status: "configured" as DatablockStatus } : db
-        ));
+    const handleSaveSchema = async () => {
+        if (!selectedDatablock || !selectedProject) return;
+        
+        setIsSaving(true);
+        try {
+            const updateData: DatablockUpdate = {
+                schema_fields: editingSchema.map(f => ({
+                    name: f.name,
+                    type: f.type,
+                    required: f.required,
+                    description: f.description,
+                    is_primary_key: f.is_primary_key,
+                })),
+            };
+            
+            const updated = await datablocksApi.update(
+                selectedProject.id,
+                selectedDatablock.id,
+                updateData
+            );
+            
+            setDatablocks(datablocks.map(db =>
+                db.id === updated.id ? updated : db
+            ));
+            setSelectedDatablock(updated);
+            setIsEditingSchema(false);
+        } catch (err) {
+            console.error("Failed to save schema:", err);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleSaveSchema = () => {
-        if (selectedDatablock) {
+    const handleMarkReady = async (datablockId: string) => {
+        if (!selectedProject) return;
+        
+        setIsSaving(true);
+        try {
+            const updated = await datablocksApi.markReady(selectedProject.id, datablockId);
             setDatablocks(datablocks.map(db =>
-                db.id === selectedDatablock.id ? { ...db, schema: editingSchema } : db
+                db.id === updated.id ? updated : db
             ));
-            setIsEditingSchema(false);
+            if (selectedDatablock?.id === datablockId) {
+                setSelectedDatablock(updated);
+            }
+        } catch (err) {
+            console.error("Failed to mark ready:", err);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -316,7 +266,7 @@ export default function DataModeling() {
                 type: "string",
                 required: false,
                 description: "",
-                isPrimaryKey: false,
+                is_primary_key: false,
             },
         ]);
     };
@@ -325,30 +275,64 @@ export default function DataModeling() {
         setEditingSchema(editingSchema.filter(f => f.id !== fieldId));
     };
 
-    const handleCreateDatablock = () => {
-        const newDb: Datablock = {
-            id: `custom_${Date.now()}`,
-            name: newDatablock.name.toLowerCase().replace(/\s+/g, "_"),
-            displayName: newDatablock.displayName,
-            description: newDatablock.description,
-            icon: "database",
-            sourceType: newDatablock.sourceType,
-            status: "not_configured",
-            isPredefined: false,
-            schema: [
-                { id: "f1", name: "id", type: "string", required: true, description: "Primary key", isPrimaryKey: true },
-            ],
-            recordCount: 0,
-            lastSync: null,
-        };
-        setDatablocks([...datablocks, newDb]);
-        setIsCreateDialogOpen(false);
-        setNewDatablock({ name: "", displayName: "", description: "", sourceType: "event" });
+    const handleCreateFromTemplate = async (templateId: string) => {
+        if (!selectedProject) return;
+        
+        setIsSaving(true);
+        try {
+            const newDatablock = await datablocksApi.createFromTemplate(
+                selectedProject.id,
+                templateId
+            );
+            setDatablocks([newDatablock, ...datablocks]);
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Failed to create datablock";
+            console.error("Failed to create from template:", err);
+            alert(errorMessage);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleDeleteDatablock = (datablockId: string) => {
-        setDatablocks(datablocks.filter(db => db.id !== datablockId));
-        setIsConfigDrawerOpen(false);
+    const handleCreateCustomDatablock = async () => {
+        if (!selectedProject) return;
+        
+        setIsSaving(true);
+        try {
+            const createData: DatablockCreate = {
+                name: newDatablock.name.toLowerCase().replace(/\s+/g, "_"),
+                display_name: newDatablock.displayName,
+                description: newDatablock.description,
+                source_type: newDatablock.sourceType,
+                icon: "database",
+                schema_fields: [
+                    { name: "id", type: "string", required: true, description: "Primary key", is_primary_key: true },
+                ],
+            };
+            
+            const created = await datablocksApi.create(selectedProject.id, createData);
+            setDatablocks([created, ...datablocks]);
+            setIsCreateDialogOpen(false);
+            setNewDatablock({ name: "", displayName: "", description: "", sourceType: "event" });
+        } catch (err) {
+            console.error("Failed to create datablock:", err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteDatablock = async (datablockId: string) => {
+        if (!selectedProject) return;
+        
+        if (!confirm("Are you sure you want to delete this datablock?")) return;
+        
+        try {
+            await datablocksApi.delete(selectedProject.id, datablockId);
+            setDatablocks(datablocks.filter(db => db.id !== datablockId));
+            setIsConfigDrawerOpen(false);
+        } catch (err) {
+            console.error("Failed to delete datablock:", err);
+        }
     };
 
     const copyToClipboard = (text: string, id: string) => {
@@ -358,7 +342,7 @@ export default function DataModeling() {
     };
 
     const generateEventSnippet = (datablock: Datablock) => {
-        return `// Send ${datablock.displayName} event
+        return `// Send ${datablock.display_name} event
 fetch('https://api.cartnudge.ai/v1/events', {
   method: 'POST',
   headers: {
@@ -366,17 +350,44 @@ fetch('https://api.cartnudge.ai/v1/events', {
     'X-API-Key': 'YOUR_API_KEY'
   },
   body: JSON.stringify({
-    topic: '${datablock.eventTopic || datablock.name}',
+    topic: '${datablock.event_topic || datablock.name}',
     data: {
-${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' : f.type === 'number' ? '0' : f.type === 'boolean' ? 'true' : '"value"'}`).join(',\n')}
+${datablock.schema_fields.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' : f.type === 'number' ? '0' : f.type === 'boolean' ? 'true' : '"value"'}`).join(',\n')}
     }
   })
 });`;
     };
 
+    // Get templates that haven't been activated yet
+    const availableTemplates = templates.filter(
+        template => !datablocks.some(db => db.template_id === template.template_id)
+    );
+
     const deployedDatablocks = datablocks.filter(db => db.status === "deployed");
-    const configuredDatablocks = datablocks.filter(db => db.status === "configured");
-    const notConfiguredDatablocks = datablocks.filter(db => db.status === "not_configured");
+    const readyDatablocks = datablocks.filter(db => db.status === "ready_for_deployment");
+    const configuredDatablocks = datablocks.filter(db => db.status === "configured" || db.status === "not_configured");
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                    <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                    <p className="text-slate-600">{error}</p>
+                    <Button variant="outline" className="mt-4" onClick={loadDatablocks}>
+                        Retry
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -413,7 +424,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                             <Clock className="h-5 w-5 text-amber-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-slate-900">{configuredDatablocks.length}</p>
+                            <p className="text-2xl font-bold text-slate-900">{readyDatablocks.length}</p>
                             <p className="text-sm text-slate-500">Ready to Deploy</p>
                         </div>
                     </div>
@@ -424,8 +435,8 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                             <Database className="h-5 w-5 text-slate-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-slate-900">{notConfiguredDatablocks.length}</p>
-                            <p className="text-sm text-slate-500">Not Configured</p>
+                            <p className="text-2xl font-bold text-slate-900">{configuredDatablocks.length}</p>
+                            <p className="text-sm text-slate-500">Configuring</p>
                         </div>
                     </div>
                 </div>
@@ -436,7 +447,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-slate-900">
-                                {datablocks.filter(db => db.sourceType === "event").length}
+                                {datablocks.filter(db => db.source_type === "event").length}
                             </p>
                             <p className="text-sm text-slate-500">Event Streams</p>
                         </div>
@@ -450,7 +461,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                     <h2 className="text-lg font-semibold text-slate-900">Deployed Datablocks</h2>
                     <div className="grid grid-cols-2 gap-4">
                         {deployedDatablocks.map((datablock) => {
-                            const sourceConfig = sourceTypeConfig[datablock.sourceType];
+                            const sourceConfig = sourceTypeConfig[datablock.source_type];
                             const SourceIcon = sourceConfig.icon;
                             return (
                                 <div
@@ -465,7 +476,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <h3 className="font-semibold text-slate-900">{datablock.displayName}</h3>
+                                                    <h3 className="font-semibold text-slate-900">{datablock.display_name}</h3>
                                                     {getStatusBadge(datablock.status)}
                                                 </div>
                                                 <p className="text-sm text-slate-500 mt-1 line-clamp-1">{datablock.description}</p>
@@ -475,7 +486,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                                         {sourceConfig.label}
                                                     </span>
                                                     <span className="text-xs text-slate-400">
-                                                        {datablock.recordCount.toLocaleString()} records
+                                                        {datablock.record_count.toLocaleString()} records
                                                     </span>
                                                 </div>
                                             </div>
@@ -489,8 +500,8 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                 </div>
             )}
 
-            {/* Configured (Ready to Deploy) */}
-            {configuredDatablocks.length > 0 && (
+            {/* Ready to Deploy */}
+            {readyDatablocks.length > 0 && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -499,8 +510,8 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        {configuredDatablocks.map((datablock) => {
-                            const sourceConfig = sourceTypeConfig[datablock.sourceType];
+                        {readyDatablocks.map((datablock) => {
+                            const sourceConfig = sourceTypeConfig[datablock.source_type];
                             const SourceIcon = sourceConfig.icon;
                             return (
                                 <div
@@ -515,7 +526,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <h3 className="font-semibold text-slate-900">{datablock.displayName}</h3>
+                                                    <h3 className="font-semibold text-slate-900">{datablock.display_name}</h3>
                                                     {getStatusBadge(datablock.status)}
                                                 </div>
                                                 <p className="text-sm text-slate-500 mt-1 line-clamp-1">{datablock.description}</p>
@@ -536,30 +547,30 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                 </div>
             )}
 
-            {/* Not Configured Datablocks */}
-            {notConfiguredDatablocks.length > 0 && (
+            {/* Active Datablocks (configured but not ready) */}
+            {configuredDatablocks.length > 0 && (
                 <div className="space-y-4">
-                    <h2 className="text-lg font-semibold text-slate-900">Available Datablocks</h2>
-                    <p className="text-sm text-slate-500">Configure these datablocks to define your data schema</p>
+                    <h2 className="text-lg font-semibold text-slate-900">Active Datablocks</h2>
+                    <p className="text-sm text-slate-500">Configure these datablocks and mark them ready for deployment</p>
                     <div className="grid grid-cols-2 gap-4">
-                        {notConfiguredDatablocks.map((datablock) => {
-                            const sourceConfig = sourceTypeConfig[datablock.sourceType];
+                        {configuredDatablocks.map((datablock) => {
+                            const sourceConfig = sourceTypeConfig[datablock.source_type];
                             const SourceIcon = sourceConfig.icon;
                             return (
                                 <div
                                     key={datablock.id}
-                                    className="bg-white rounded-xl border border-dashed p-5 hover:border-slate-400 transition-colors cursor-pointer"
+                                    className="bg-white rounded-xl border p-5 hover:border-slate-400 transition-colors cursor-pointer"
                                     onClick={() => handleOpenConfig(datablock)}
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-start gap-4">
-                                            <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                            <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
                                                 {getIcon(datablock.icon)}
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <h3 className="font-semibold text-slate-900">{datablock.displayName}</h3>
-                                                    {datablock.isPredefined && (
+                                                    <h3 className="font-semibold text-slate-900">{datablock.display_name}</h3>
+                                                    {datablock.is_predefined && (
                                                         <Badge variant="outline" className="text-xs">Predefined</Badge>
                                                     )}
                                                 </div>
@@ -591,6 +602,64 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                 </div>
             )}
 
+            {/* Available Templates */}
+            {availableTemplates.length > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold text-slate-900">Available Templates</h2>
+                    <p className="text-sm text-slate-500">Predefined data models ready to activate</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        {availableTemplates.map((template) => {
+                            const sourceConfig = sourceTypeConfig[template.source_type];
+                            const SourceIcon = sourceConfig.icon;
+                            return (
+                                <div
+                                    key={template.template_id}
+                                    className="bg-white rounded-xl border border-dashed p-5 hover:border-slate-400 transition-colors"
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start gap-4">
+                                            <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                                {getIcon(template.icon)}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-slate-900">{template.display_name}</h3>
+                                                    <Badge variant="outline" className="text-xs">Template</Badge>
+                                                </div>
+                                                <p className="text-sm text-slate-500 mt-1 line-clamp-2">{template.description}</p>
+                                                <div className="flex items-center gap-2 mt-3">
+                                                    <span className={cn("inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full", sourceConfig.color)}>
+                                                        <SourceIcon className="h-3 w-3" />
+                                                        {sourceConfig.label}
+                                                    </span>
+                                                    <span className="text-xs text-slate-400">
+                                                        {template.default_schema.length} fields
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleCreateFromTemplate(template.template_id)}
+                                            disabled={isSaving}
+                                        >
+                                            {isSaving ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Plus className="h-3 w-3 mr-1" />
+                                                    Activate
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* Configuration Drawer */}
             <Sheet open={isConfigDrawerOpen} onOpenChange={setIsConfigDrawerOpen}>
                 <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto">
@@ -600,14 +669,14 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "h-10 w-10 rounded-lg flex items-center justify-center",
-                                        selectedDatablock.status === "active"
+                                        selectedDatablock.status === "deployed"
                                             ? "bg-emerald-100 text-emerald-600"
                                             : "bg-slate-100 text-slate-600"
                                     )}>
                                         {getIcon(selectedDatablock.icon)}
                                     </div>
                                     <div>
-                                        <SheetTitle>{selectedDatablock.displayName}</SheetTitle>
+                                        <SheetTitle>{selectedDatablock.display_name}</SheetTitle>
                                         <p className="text-sm text-slate-500">{selectedDatablock.description}</p>
                                     </div>
                                 </div>
@@ -628,13 +697,17 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                             {isEditingSchema ? (
                                                 <div className="flex gap-2">
                                                     <Button size="sm" variant="ghost" onClick={() => {
-                                                        setEditingSchema([...selectedDatablock.schema]);
+                                                        setEditingSchema([...selectedDatablock.schema_fields]);
                                                         setIsEditingSchema(false);
                                                     }}>
                                                         Cancel
                                                     </Button>
-                                                    <Button size="sm" onClick={handleSaveSchema}>
-                                                        <Check className="h-3 w-3 mr-1" />
+                                                    <Button size="sm" onClick={handleSaveSchema} disabled={isSaving}>
+                                                        {isSaving ? (
+                                                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                                        ) : (
+                                                            <Check className="h-3 w-3 mr-1" />
+                                                        )}
                                                         Save
                                                     </Button>
                                                 </div>
@@ -649,7 +722,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                         <div className="space-y-2">
                                             {editingSchema.map((field, index) => (
                                                 <div
-                                                    key={field.id}
+                                                    key={field.id || index}
                                                     className={cn(
                                                         "p-3 rounded-lg border",
                                                         isEditingSchema ? "bg-white" : "bg-slate-50"
@@ -693,8 +766,8 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                                                     size="icon"
                                                                     variant="ghost"
                                                                     className="text-red-500"
-                                                                    onClick={() => handleRemoveField(field.id)}
-                                                                    disabled={field.isPrimaryKey}
+                                                                    onClick={() => handleRemoveField(field.id!)}
+                                                                    disabled={field.is_primary_key}
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
                                                                 </Button>
@@ -713,11 +786,11 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                                                 </label>
                                                                 <label className="flex items-center gap-2 text-sm">
                                                                     <Switch
-                                                                        checked={field.isPrimaryKey}
+                                                                        checked={field.is_primary_key}
                                                                         onCheckedChange={(checked) => {
                                                                             const updated = editingSchema.map((f, i) => ({
                                                                                 ...f,
-                                                                                isPrimaryKey: i === index ? checked : false,
+                                                                                is_primary_key: i === index ? checked : false,
                                                                             }));
                                                                             setEditingSchema(updated);
                                                                         }}
@@ -726,7 +799,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                                                 </label>
                                                             </div>
                                                             <Input
-                                                                value={field.description}
+                                                                value={field.description || ""}
                                                                 onChange={(e) => {
                                                                     const updated = [...editingSchema];
                                                                     updated[index] = { ...field, description: e.target.value };
@@ -742,7 +815,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                                                 <code className="text-sm font-mono text-slate-700">{field.name}</code>
                                                                 <Badge variant="outline" className="text-xs">{field.type}</Badge>
                                                                 {field.required && <Badge className="bg-amber-100 text-amber-700 text-xs">Required</Badge>}
-                                                                {field.isPrimaryKey && <Badge className="bg-violet-100 text-violet-700 text-xs">PK</Badge>}
+                                                                {field.is_primary_key && <Badge className="bg-violet-100 text-violet-700 text-xs">PK</Badge>}
                                                             </div>
                                                             <span className="text-xs text-slate-400">{field.description}</span>
                                                         </div>
@@ -764,7 +837,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                         <div className="p-4 rounded-lg bg-slate-50 border">
                                             <div className="flex items-center gap-3">
                                                 {(() => {
-                                                    const config = sourceTypeConfig[selectedDatablock.sourceType];
+                                                    const config = sourceTypeConfig[selectedDatablock.source_type];
                                                     const Icon = config.icon;
                                                     return (
                                                         <>
@@ -782,7 +855,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                         </div>
 
                                         {/* Event-based ingestion */}
-                                        {(selectedDatablock.sourceType === "event" || selectedDatablock.sourceType === "hybrid") && (
+                                        {(selectedDatablock.source_type === "event" || selectedDatablock.source_type === "hybrid") && (
                                             <div className="space-y-3">
                                                 <h4 className="font-medium text-slate-900">Event Integration</h4>
                                                 <div className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto">
@@ -807,7 +880,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                         )}
 
                                         {/* CSV Upload */}
-                                        {(selectedDatablock.sourceType === "csv" || selectedDatablock.sourceType === "hybrid") && (
+                                        {(selectedDatablock.source_type === "csv" || selectedDatablock.source_type === "hybrid") && (
                                             <div className="space-y-3">
                                                 <h4 className="font-medium text-slate-900">CSV Import</h4>
                                                 <div className="border-2 border-dashed rounded-lg p-8 text-center">
@@ -827,7 +900,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                         )}
 
                                         {/* API Sync */}
-                                        {selectedDatablock.sourceType === "api" && (
+                                        {selectedDatablock.source_type === "api" && (
                                             <div className="space-y-3">
                                                 <h4 className="font-medium text-slate-900">API Configuration</h4>
                                                 <div className="space-y-3">
@@ -858,7 +931,7 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
 
                             {/* Footer Actions */}
                             <div className="mt-6 pt-4 border-t flex items-center justify-between">
-                                {!selectedDatablock.isPredefined && (
+                                {!selectedDatablock.is_predefined && (
                                     <Button
                                         variant="ghost"
                                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -869,18 +942,22 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                                     </Button>
                                 )}
                                 <div className="flex gap-2 ml-auto">
-                                    {selectedDatablock.status === "not_configured" && (
+                                    {(selectedDatablock.status === "not_configured" || selectedDatablock.status === "configured") && (
                                         <Button
                                             onClick={() => {
-                                                handleMarkConfigured(selectedDatablock.id);
-                                                setIsConfigDrawerOpen(false);
+                                                handleMarkReady(selectedDatablock.id);
                                             }}
+                                            disabled={isSaving}
                                         >
-                                            <Check className="h-4 w-4 mr-2" />
-                                            Save & Mark Ready
+                                            {isSaving ? (
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            ) : (
+                                                <Check className="h-4 w-4 mr-2" />
+                                            )}
+                                            Mark Ready for Deployment
                                         </Button>
                                     )}
-                                    {selectedDatablock.status === "configured" && (
+                                    {selectedDatablock.status === "ready_for_deployment" && (
                                         <div className="flex items-center gap-3">
                                             <p className="text-sm text-slate-500">
                                                 Go to Deployments to deploy this datablock
@@ -969,9 +1046,12 @@ ${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' 
                             Cancel
                         </Button>
                         <Button
-                            onClick={handleCreateDatablock}
-                            disabled={!newDatablock.displayName.trim()}
+                            onClick={handleCreateCustomDatablock}
+                            disabled={!newDatablock.displayName.trim() || isSaving}
                         >
+                            {isSaving ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : null}
                             Create Datablock
                         </Button>
                     </DialogFooter>
