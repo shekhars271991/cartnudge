@@ -1,12 +1,13 @@
 """
 Pydantic schemas for Pipeline API.
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PipelineCategory(str, Enum):
@@ -44,7 +45,7 @@ class EventFieldSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     type: FieldType
     required: bool = False
-    description: str | None = None
+    description: Optional[str] = None
 
 
 # -----------------------------------------------------------------------------
@@ -54,9 +55,9 @@ class EventFieldSchema(BaseModel):
 class EventBase(BaseModel):
     """Base schema for pipeline event."""
     name: str = Field(..., min_length=1, max_length=255)
-    description: str | None = None
+    description: Optional[str] = None
     enabled: bool = True
-    fields: list[EventFieldSchema] = []
+    fields: List[EventFieldSchema] = []
 
 
 class EventCreate(EventBase):
@@ -66,9 +67,9 @@ class EventCreate(EventBase):
 
 class EventUpdate(BaseModel):
     """Schema for updating an event."""
-    description: str | None = None
-    enabled: bool | None = None
-    fields: list[EventFieldSchema] | None = None
+    description: Optional[str] = None
+    enabled: Optional[bool] = None
+    fields: Optional[List[EventFieldSchema]] = None
 
 
 class EventResponse(EventBase):
@@ -83,38 +84,37 @@ class EventResponse(EventBase):
 class PipelineBase(BaseModel):
     """Base schema for pipeline."""
     name: str = Field(..., min_length=1, max_length=255)
-    description: str | None = None
+    description: Optional[str] = None
     category: PipelineCategory
 
 
 class PipelineCreate(PipelineBase):
     """Schema for creating a pipeline."""
-    events: list[EventCreate] = []
+    events: List[EventCreate] = []
 
 
 class PipelineUpdate(BaseModel):
     """Schema for updating a pipeline."""
-    name: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
-    status: PipelineStatus | None = None
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    status: Optional[PipelineStatus] = None
 
 
 class PipelineResponse(PipelineBase):
     """Schema for pipeline response."""
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+    
     id: str = Field(..., alias="_id")
     project_id: str
     status: PipelineStatus
-    events: list[EventResponse] = []
+    events: List[EventResponse] = []
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        populate_by_name = True
 
 
 class PipelineListResponse(BaseModel):
     """Schema for list of pipelines."""
-    items: list[PipelineResponse]
+    items: List[PipelineResponse]
     total: int
 
 

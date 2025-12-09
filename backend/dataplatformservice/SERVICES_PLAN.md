@@ -2,8 +2,6 @@
 
 This document outlines the Data Platform Service architecture. The service manages configurations for data models, pipelines, and feature stores. Runtime containers are SHARED (multi-tenant) with per-project isolation via routing.
 
-> **NOTE:** Project/User management is handled by a separate Identity Service (PostgreSQL). This service only handles data platform concerns.
-
 ---
 
 ## Architecture Overview

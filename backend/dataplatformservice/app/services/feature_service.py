@@ -1,6 +1,7 @@
 """
 Feature service - business logic for feature management with MongoDB.
 """
+from __future__ import annotations
 
 from datetime import datetime
 

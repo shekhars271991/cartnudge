@@ -37,16 +37,28 @@ async def create_indexes():
     """Create database indexes."""
     db = get_database()
     
-    # Pipelines indexes
-    await db.pipelines.create_index("project_id")
-    await db.pipelines.create_index([("project_id", 1), ("status", 1)])
+    # Users indexes
+    await db.users.create_index("email", unique=True)
     
-    # Features indexes
-    await db.features.create_index("project_id")
-    await db.features.create_index([("project_id", 1), ("enabled", 1)])
+    # Projects indexes
+    await db.projects.create_index("slug", unique=True)
+    await db.projects.create_index("created_by")
+    await db.projects.create_index("members.user_id")
     
-    # Deployments indexes
-    await db.deployments.create_index([("project_id", 1), ("created_at", -1)])
+    # API Keys indexes
+    await db.api_keys.create_index("project_id")
+    await db.api_keys.create_index("key_prefix")
+    
+    # Refresh Tokens indexes
+    await db.refresh_tokens.create_index("user_id")
+    await db.refresh_tokens.create_index("token_hash")
+    await db.refresh_tokens.create_index("expires_at", expireAfterSeconds=0)
+    
+    # Invitations indexes
+    await db.invitations.create_index("project_id")
+    await db.invitations.create_index("email")
+    await db.invitations.create_index("token", unique=True)
+    await db.invitations.create_index("expires_at", expireAfterSeconds=0)
 
 
 def get_database() -> AsyncIOMotorDatabase:

@@ -1,6 +1,7 @@
 """
 Pipeline service - business logic for pipeline management with MongoDB.
 """
+from __future__ import annotations
 
 import secrets
 from datetime import datetime

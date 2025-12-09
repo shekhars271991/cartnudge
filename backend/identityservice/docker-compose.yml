@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  # ==========================================================================
+  # MongoDB - Identity Data Store
+  # ==========================================================================
+  mongodb:
+    image: mongo:7.0
+    container_name: identity-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: cartnudge
+      MONGO_INITDB_ROOT_PASSWORD: cartnudge_dev
+      MONGO_INITDB_DATABASE: identity
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # Development Tools (Optional)
+  # ==========================================================================
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: identity-mongo-express
+    depends_on:
+      - mongodb
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: cartnudge
+      ME_CONFIG_MONGODB_ADMINPASSWORD: cartnudge_dev
+      ME_CONFIG_MONGODB_URL: mongodb://cartnudge:cartnudge_dev@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    profiles:
+      - tools
+
+volumes:
+  mongodb_data:
+

@@ -10,7 +10,7 @@ from httpx import AsyncClient, ASGITransport
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.core.config import settings
-from app.db.mongodb import get_database
+from app.core.dependencies import get_db
 from main import app
 
 
@@ -39,13 +39,11 @@ async def test_db():
 async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
     """Create test client."""
     
-    def override_get_db():
+    async def override_get_db():
         return test_db
     
-    # Override the dependency
-    from app.core import dependencies
-    original_get_db = dependencies.get_db
-    dependencies.get_db = override_get_db
+    # Override the dependency using FastAPI's dependency_overrides
+    app.dependency_overrides[get_db] = override_get_db
     
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -53,8 +51,8 @@ async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
     ) as client:
         yield client
     
-    # Restore original
-    dependencies.get_db = original_get_db
+    # Clear the override
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture(autouse=True)

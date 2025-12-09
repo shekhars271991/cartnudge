@@ -17,24 +17,22 @@ class Settings(BaseSettings):
     )
     
     # Application
-    app_name: str = "CartNudge Data Platform"
+    app_name: str = "CartNudge Identity Service"
     app_env: str = "development"
     debug: bool = True
     
     # MongoDB
     mongodb_url: str = "mongodb://cartnudge:cartnudge_dev@localhost:27017"
-    mongodb_db_name: str = "dataplatform"
+    mongodb_db_name: str = "identity"
     
-    # Kafka
-    kafka_bootstrap_servers: str = "localhost:9092"
-    kafka_topic_events: str = "events"
+    # JWT Settings
+    secret_key: str = "your-super-secret-key-change-in-production"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
     
-    # Aerospike
-    aerospike_hosts: str = "localhost:3000"
-    aerospike_namespace: str = "features"
-    
-    # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    # Password Reset
+    password_reset_token_expire_hours: int = 24
     
     # CORS
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
@@ -43,14 +41,6 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Parse CORS origins from comma-separated string."""
         return [origin.strip() for origin in self.cors_origins.split(",")]
-    
-    @property
-    def aerospike_hosts_list(self) -> list[tuple[str, int]]:
-        """Parse Aerospike hosts."""
-        hosts = []
-        for host in self.aerospike_hosts.split(","):
-            parts = host.strip().split(":")
-            hosts.append((parts[0], int(parts[1]) if len(parts) > 1 else 3000))
 
 
 @lru_cache
@@ -60,3 +50,4 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+

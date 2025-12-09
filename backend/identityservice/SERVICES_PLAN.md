@@ -2,8 +2,6 @@
 
 This document outlines the Identity Service architecture. Handles authentication, user management, projects, teams, and API keys.
 
-This is a separate service from the Data Platform Service. Uses MongoDB (shared instance with Data Platform).
-
 ---
 
 ## Architecture Overview
@@ -71,7 +69,7 @@ This is a separate service from the Data Platform Service. Uses MongoDB (shared 
 
 | Component | Technology | Purpose | Port |
 |-----------|------------|---------|------|
-| Database | MongoDB | Users, projects, teams (shared with Data Platform) | 27017 |
+| Database | MongoDB | Users, projects, teams | 27017 |
 | Cache | Redis | Session cache, rate limiting, token blacklist | 6379 |
 
 ### Authentication Stack
@@ -195,10 +193,17 @@ Pending team invitations.
 
 | Role | Description | Permissions |
 |------|-------------|-------------|
-| **owner** | Full access, can delete project | `*` |
-| **admin** | Manage settings, invite members, manage API keys | `project:read`, `project:update`, `members:*`, `api_keys:*`, `pipelines:*`, `features:*`, `deployments:*` |
+| **owner** | Full access, can delete project | `*` (includes `billing:*`) |
+| **admin** | Manage settings, invite members, manage API keys | `project:read`, `project:update`, `members:*`, `api_keys:*`, `billing:read`, `pipelines:*`, `features:*`, `deployments:*` |
 | **developer** | Edit pipelines, features, deploy | `project:read`, `members:read`, `api_keys:read`, `pipelines:*`, `features:*`, `deployments:create`, `deployments:read` |
 | **viewer** | Read-only access | `project:read`, `members:read`, `pipelines:read`, `features:read`, `deployments:read` |
+
+### Billing Permissions
+| Permission | Description |
+|------------|-------------|
+| `billing:read` | View billing info, invoices, usage |
+| `billing:update` | Update payment method, billing details |
+| `billing:manage` | Change plan, cancel subscription |
 
 ---
 
@@ -260,7 +265,7 @@ Pending team invitations.
 
 ```
 backend/identityservice/
-├── docker-compose.yml           # Redis only (MongoDB shared)
+├── docker-compose.yml           # MongoDB, Redis
 ├── SERVICES_PLAN.md             # This file
 ├── main.py                      # FastAPI entry point
 ├── requirements.txt             # Python dependencies
@@ -305,9 +310,8 @@ backend/identityservice/
 
 ### Phase 1: Core Setup
 - [ ] FastAPI app with MongoDB connection (Motor)
-- [ ] Shared MongoDB instance with Data Platform
 - [ ] Basic config management
-- [ ] Docker compose (Redis only)
+- [ ] Docker compose (MongoDB + Redis)
 
 ### Phase 2: Authentication
 - [ ] User registration

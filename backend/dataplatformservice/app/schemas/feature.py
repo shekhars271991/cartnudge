@@ -1,11 +1,13 @@
 """
 Pydantic schemas for Feature API.
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AggregationType(str, Enum):
@@ -41,11 +43,11 @@ class TimeWindow(str, Enum):
 class FeatureBase(BaseModel):
     """Base schema for feature."""
     name: str = Field(..., min_length=1, max_length=255)
-    description: str | None = None
+    description: Optional[str] = None
     source_event: str = Field(..., description="Event name to aggregate")
     aggregation: AggregationType
-    field: str | None = Field(None, description="Field to aggregate (for SUM, AVG, etc.)")
-    time_windows: list[TimeWindow] = [TimeWindow.TWENTY_FOUR_HOURS]
+    field: Optional[str] = Field(None, description="Field to aggregate (for SUM, AVG, etc.)")
+    time_windows: List[TimeWindow] = [TimeWindow.TWENTY_FOUR_HOURS]
 
 
 class FeatureCreate(FeatureBase):
@@ -55,29 +57,27 @@ class FeatureCreate(FeatureBase):
 
 class FeatureUpdate(BaseModel):
     """Schema for updating a feature."""
-    name: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
-    aggregation: AggregationType | None = None
-    field: str | None = None
-    time_windows: list[TimeWindow] | None = None
-    enabled: bool | None = None
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    aggregation: Optional[AggregationType] = None
+    field: Optional[str] = None
+    time_windows: Optional[List[TimeWindow]] = None
+    enabled: Optional[bool] = None
 
 
 class FeatureResponse(FeatureBase):
     """Schema for feature response."""
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+    
     id: str = Field(..., alias="_id")
     project_id: str
     pipeline_id: str
     enabled: bool
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        populate_by_name = True
 
 
 class FeatureListResponse(BaseModel):
     """Schema for list of features."""
-    items: list[FeatureResponse]
+    items: List[FeatureResponse]
     total: int
-
