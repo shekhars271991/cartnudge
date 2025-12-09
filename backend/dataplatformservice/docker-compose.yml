@@ -6,15 +6,15 @@ services:
   # ==========================================================================
   mongodb:
     image: mongo:7.0
-    container_name: cartnudge-mongodb
+    container_name: dataplatform-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: cartnudge
       MONGO_INITDB_ROOT_PASSWORD: cartnudge_dev
       MONGO_INITDB_DATABASE: dataplatform
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
-      - mongodb_data:/data/db
+      - dataplatform_mongodb_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -26,34 +26,34 @@ services:
   # ==========================================================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
-    container_name: cartnudge-zookeeper
+    container_name: dataplatform-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "2181:2181"
+      - "2182:2181"
     volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_log:/var/lib/zookeeper/log
+      - dataplatform_zookeeper_data:/var/lib/zookeeper/data
+      - dataplatform_zookeeper_log:/var/lib/zookeeper/log
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
-    container_name: cartnudge-kafka
+    container_name: dataplatform-kafka
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
-      - "9094:9094"
+      - "9093:9092"
+      - "9095:9094"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - dataplatform_kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
@@ -65,13 +65,13 @@ services:
   # ==========================================================================
   aerospike:
     image: aerospike/aerospike-server:7.0.0.0
-    container_name: cartnudge-aerospike
+    container_name: dataplatform-aerospike
     ports:
-      - "3000:3000"
-      - "3001:3001"
-      - "3002:3002"
+      - "3010:3000"
+      - "3011:3001"
+      - "3012:3002"
     volumes:
-      - aerospike_data:/opt/aerospike/data
+      - dataplatform_aerospike_data:/opt/aerospike/data
     healthcheck:
       test: ["CMD", "asinfo", "-v", "status"]
       interval: 10s
@@ -79,54 +79,15 @@ services:
       retries: 5
 
   # ==========================================================================
-  # Redis - Caching & Rate Limiting
-  # ==========================================================================
-  redis:
-    image: redis:7.2-alpine
-    container_name: cartnudge-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ==========================================================================
-  # ClickHouse - Historical Analytics (Optional)
-  # ==========================================================================
-  clickhouse:
-    image: clickhouse/clickhouse-server:24.1
-    container_name: cartnudge-clickhouse
-    ports:
-      - "8123:8123"
-      - "9000:9000"
-    environment:
-      CLICKHOUSE_USER: cartnudge
-      CLICKHOUSE_PASSWORD: cartnudge_dev
-      CLICKHOUSE_DB: events
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-    healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    profiles:
-      - analytics
-
-  # ==========================================================================
   # Development Tools (Optional)
   # ==========================================================================
   mongo-express:
     image: mongo-express:1.0.2
-    container_name: cartnudge-mongo-express
+    container_name: dataplatform-mongo-express
     depends_on:
       - mongodb
     ports:
-      - "8081:8081"
+      - "8083:8081"
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: cartnudge
       ME_CONFIG_MONGODB_ADMINPASSWORD: cartnudge_dev
@@ -137,11 +98,11 @@ services:
 
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.1
-    container_name: cartnudge-kafka-ui
+    container_name: dataplatform-kafka-ui
     depends_on:
       - kafka
     ports:
-      - "8082:8080"
+      - "8084:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
@@ -150,10 +111,8 @@ services:
       - tools
 
 volumes:
-  mongodb_data:
-  zookeeper_data:
-  zookeeper_log:
-  kafka_data:
-  aerospike_data:
-  redis_data:
-  clickhouse_data:
+  dataplatform_mongodb_data:
+  dataplatform_zookeeper_data:
+  dataplatform_zookeeper_log:
+  dataplatform_kafka_data:
+  dataplatform_aerospike_data:

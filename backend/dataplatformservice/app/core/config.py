@@ -22,19 +22,16 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # MongoDB
-    mongodb_url: str = "mongodb://cartnudge:cartnudge_dev@localhost:27017"
+    mongodb_url: str = "mongodb://cartnudge:cartnudge_dev@localhost:27018"
     mongodb_db_name: str = "dataplatform"
     
     # Kafka
-    kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_bootstrap_servers: str = "localhost:9093"
     kafka_topic_events: str = "events"
     
     # Aerospike
-    aerospike_hosts: str = "localhost:3000"
+    aerospike_hosts: str = "localhost:3010"
     aerospike_namespace: str = "features"
-    
-    # Redis
-    redis_url: str = "redis://localhost:6379/0"
     
     # CORS
     cors_origins: str = "http://localhost:5173,http://localhost:3000"

@@ -16,6 +16,15 @@ from app.schemas.feature import (
     FeatureResponse,
     FeatureListResponse,
 )
+from app.schemas.datablock import (
+    DatablockCreate,
+    DatablockUpdate,
+    DatablockResponse,
+    DatablockListResponse,
+    SchemaFieldCreate,
+    SchemaFieldResponse,
+    PredefinedDatablockTemplate,
+)
 
 __all__ = [
     "PipelineCreate",
@@ -30,4 +39,11 @@ __all__ = [
     "FeatureUpdate",
     "FeatureResponse",
     "FeatureListResponse",
+    "DatablockCreate",
+    "DatablockUpdate",
+    "DatablockResponse",
+    "DatablockListResponse",
+    "SchemaFieldCreate",
+    "SchemaFieldResponse",
+    "PredefinedDatablockTemplate",
 ]

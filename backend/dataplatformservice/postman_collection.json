@@ -1,0 +1,808 @@
+{
+	"info": {
+		"_postman_id": "dataplatform-service-collection",
+		"name": "CartNudge Data Platform Service",
+		"description": "API collection for CartNudge Data Platform Service - manages datablocks, pipelines, and features for real-time ML feature engineering.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8010",
+			"type": "string"
+		},
+		{
+			"key": "project_id",
+			"value": "test-project",
+			"type": "string"
+		},
+		{
+			"key": "pipeline_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "datablock_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "feature_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Datablocks",
+			"description": "Datablock management - predefined templates and custom datablocks for data modeling.",
+			"item": [
+				{
+					"name": "Templates",
+					"item": [
+						{
+							"name": "List Predefined Templates",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/datablocks/templates",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "datablocks", "templates"]
+								},
+								"description": "Get all available predefined datablock templates (users, products, cart_events, page_views, orders)."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Template - Users",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/datablocks/templates/users",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "datablocks", "templates", "users"]
+								},
+								"description": "Get the 'users' predefined template."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Template - Products",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/datablocks/templates/products",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "datablocks", "templates", "products"]
+								},
+								"description": "Get the 'products' predefined template."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Template - Cart Events",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/datablocks/templates/cart_events",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "datablocks", "templates", "cart_events"]
+								},
+								"description": "Get the 'cart_events' predefined template."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "CRUD",
+					"item": [
+						{
+							"name": "List Project Datablocks",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks?skip=0&limit=100",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks"],
+									"query": [
+										{"key": "skip", "value": "0"},
+										{"key": "limit", "value": "100"}
+									]
+								},
+								"description": "List all datablocks for a project with pagination."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Custom Datablock",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('datablock_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"custom_events\",\n    \"display_name\": \"Custom Events\",\n    \"description\": \"Custom event tracking datablock\",\n    \"source_type\": \"event\",\n    \"icon\": \"database\",\n    \"schema_fields\": [\n        {\n            \"name\": \"event_id\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"is_primary_key\": true,\n            \"description\": \"Unique event identifier\"\n        },\n        {\n            \"name\": \"user_id\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"is_primary_key\": false,\n            \"description\": \"Anonymous user identifier\"\n        },\n        {\n            \"name\": \"event_type\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"is_primary_key\": false,\n            \"description\": \"Type of event\"\n        },\n        {\n            \"name\": \"timestamp\",\n            \"type\": \"date\",\n            \"required\": true,\n            \"is_primary_key\": false,\n            \"description\": \"Event timestamp\"\n        }\n    ],\n    \"event_topic\": \"custom.events\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks"]
+								},
+								"description": "Create a new custom datablock with schema definition."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Datablock from Template - Users",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('datablock_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/from-template/users",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "from-template", "users"]
+								},
+								"description": "Create a datablock from the 'users' predefined template."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Datablock from Template - Products",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('datablock_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/from-template/products",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "from-template", "products"]
+								},
+								"description": "Create a datablock from the 'products' predefined template."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Datablock from Template - Cart Events",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('datablock_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/from-template/cart_events",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "from-template", "cart_events"]
+								},
+								"description": "Create a datablock from the 'cart_events' predefined template."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Datablock",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/{{datablock_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "{{datablock_id}}"]
+								},
+								"description": "Get a specific datablock by ID."
+							},
+							"response": []
+						},
+						{
+							"name": "Update Datablock",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"Updated datablock description\",\n    \"display_name\": \"Updated Display Name\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/{{datablock_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "{{datablock_id}}"]
+								},
+								"description": "Update a datablock's configuration."
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Datablock",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/{{datablock_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "{{datablock_id}}"]
+								},
+								"description": "Delete a datablock."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Status Updates",
+					"item": [
+						{
+							"name": "Mark Ready for Deployment",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/{{datablock_id}}/mark-ready",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "{{datablock_id}}", "mark-ready"]
+								},
+								"description": "Mark a configured datablock as ready for deployment."
+							},
+							"response": []
+						},
+						{
+							"name": "Mark as Deployed",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/datablocks/{{datablock_id}}/mark-deployed",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "datablocks", "{{datablock_id}}", "mark-deployed"]
+								},
+								"description": "Mark a datablock as deployed after successful deployment."
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Pipelines",
+			"description": "Pipeline management - event ingestion pipelines with webhooks.",
+			"item": [
+				{
+					"name": "CRUD",
+					"item": [
+						{
+							"name": "List Pipelines",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines?skip=0&limit=100",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines"],
+									"query": [
+										{"key": "skip", "value": "0"},
+										{"key": "limit", "value": "100"}
+									]
+								},
+								"description": "List all pipelines for a project."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Pipeline",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('pipeline_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Cart Events Pipeline\",\n    \"description\": \"Track cart behavior for purchase prediction\",\n    \"category\": \"behavioral\",\n    \"events\": [\n        {\n            \"name\": \"add_to_cart\",\n            \"description\": \"Item added to cart\",\n            \"enabled\": true,\n            \"fields\": [\n                {\"name\": \"user_id\", \"type\": \"string\", \"required\": true},\n                {\"name\": \"product_id\", \"type\": \"string\", \"required\": true},\n                {\"name\": \"quantity\", \"type\": \"number\", \"required\": true},\n                {\"name\": \"price\", \"type\": \"number\", \"required\": true}\n            ]\n        },\n        {\n            \"name\": \"remove_from_cart\",\n            \"description\": \"Item removed from cart\",\n            \"enabled\": true,\n            \"fields\": [\n                {\"name\": \"user_id\", \"type\": \"string\", \"required\": true},\n                {\"name\": \"product_id\", \"type\": \"string\", \"required\": true}\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines"]
+								},
+								"description": "Create a new pipeline with event definitions."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Pipeline",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}"]
+								},
+								"description": "Get a specific pipeline by ID."
+							},
+							"response": []
+						},
+						{
+							"name": "Update Pipeline",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"Updated pipeline description\",\n    \"name\": \"Updated Pipeline Name\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}"]
+								},
+								"description": "Update a pipeline."
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Pipeline",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}"]
+								},
+								"description": "Delete a pipeline."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Status",
+					"item": [
+						{
+							"name": "Activate Pipeline",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}/activate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}", "activate"]
+								},
+								"description": "Activate a pipeline to start receiving events."
+							},
+							"response": []
+						},
+						{
+							"name": "Deactivate Pipeline",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}/deactivate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}", "deactivate"]
+								},
+								"description": "Deactivate a pipeline to stop receiving events."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Webhook",
+					"item": [
+						{
+							"name": "Get Webhook Info",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}/webhook",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}", "webhook"]
+								},
+								"description": "Get webhook URL and secret for a pipeline."
+							},
+							"response": []
+						},
+						{
+							"name": "Rotate Webhook Secret",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}/webhook/rotate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}", "webhook", "rotate"]
+								},
+								"description": "Rotate the webhook secret for a pipeline."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Events",
+					"item": [
+						{
+							"name": "Add Event to Pipeline",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"checkout_started\",\n    \"description\": \"User started checkout process\",\n    \"enabled\": true,\n    \"fields\": [\n        {\"name\": \"user_id\", \"type\": \"string\", \"required\": true},\n        {\"name\": \"cart_total\", \"type\": \"number\", \"required\": true},\n        {\"name\": \"item_count\", \"type\": \"number\", \"required\": true}\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}/events",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}", "events"]
+								},
+								"description": "Add a new event definition to a pipeline."
+							},
+							"response": []
+						},
+						{
+							"name": "Update Event",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"Updated event description\",\n    \"enabled\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}/events/checkout_started",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}", "events", "checkout_started"]
+								},
+								"description": "Update an event in a pipeline."
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Event",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/pipelines/{{pipeline_id}}/events/checkout_started",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "pipelines", "{{pipeline_id}}", "events", "checkout_started"]
+								},
+								"description": "Delete an event from a pipeline."
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Features",
+			"description": "Feature management - ML feature definitions with aggregations and time windows.",
+			"item": [
+				{
+					"name": "CRUD",
+					"item": [
+						{
+							"name": "List Features",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features?skip=0&limit=100",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features"],
+									"query": [
+										{"key": "skip", "value": "0"},
+										{"key": "limit", "value": "100"}
+									]
+								},
+								"description": "List all feature definitions for a project."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Feature - Count",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('feature_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"user_cart_adds_24h\",\n    \"description\": \"Number of items added to cart in last 24 hours\",\n    \"source_event\": \"add_to_cart\",\n    \"aggregation\": \"COUNT\",\n    \"pipeline_id\": \"{{pipeline_id}}\",\n    \"time_windows\": [\"24h\", \"7d\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features"]
+								},
+								"description": "Create a COUNT feature - counts occurrences of an event."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Feature - Sum",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('feature_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"user_cart_value_7d\",\n    \"description\": \"Total cart value in last 7 days\",\n    \"source_event\": \"add_to_cart\",\n    \"aggregation\": \"SUM\",\n    \"field\": \"price\",\n    \"pipeline_id\": \"{{pipeline_id}}\",\n    \"time_windows\": [\"7d\", \"30d\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features"]
+								},
+								"description": "Create a SUM feature - sums a numeric field."
+							},
+							"response": []
+						},
+						{
+							"name": "Create Feature - Average",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData._id) {",
+											"    pm.collectionVariables.set('feature_id', jsonData._id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"user_avg_order_value\",\n    \"description\": \"Average order value for user\",\n    \"source_event\": \"purchase\",\n    \"aggregation\": \"AVG\",\n    \"field\": \"total\",\n    \"pipeline_id\": \"{{pipeline_id}}\",\n    \"time_windows\": [\"30d\", \"90d\", \"lifetime\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features"]
+								},
+								"description": "Create an AVG feature - averages a numeric field."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Feature",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features/{{feature_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features", "{{feature_id}}"]
+								},
+								"description": "Get a specific feature by ID."
+							},
+							"response": []
+						},
+						{
+							"name": "Update Feature",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"Updated feature description\",\n    \"time_windows\": [\"24h\", \"7d\", \"30d\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features/{{feature_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features", "{{feature_id}}"]
+								},
+								"description": "Update a feature definition."
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Feature",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features/{{feature_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features", "{{feature_id}}"]
+								},
+								"description": "Delete a feature."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Status",
+					"item": [
+						{
+							"name": "Enable Feature",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features/{{feature_id}}/enable",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features", "{{feature_id}}", "enable"]
+								},
+								"description": "Enable a feature for computation."
+							},
+							"response": []
+						},
+						{
+							"name": "Disable Feature",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/features/{{feature_id}}/disable",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "features", "{{feature_id}}", "disable"]
+								},
+								"description": "Disable a feature to stop computation."
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Check if the service is healthy."
+					},
+					"response": []
+				},
+				{
+					"name": "Root",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": ["{{base_url}}"],
+							"path": [""]
+						},
+						"description": "Get service info."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
+

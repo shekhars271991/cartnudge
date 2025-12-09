@@ -16,9 +16,6 @@ aiokafka==0.10.0
 # Aerospike
 aerospike==15.0.0
 
-# Redis
-redis==5.0.1
-
 # Validation & Settings
 pydantic==2.6.1
 pydantic-settings==2.1.0
@@ -33,7 +30,7 @@ structlog==24.1.0
 orjson==3.9.13
 
 # Development
-pytest==8.0.0
-pytest-asyncio==0.23.4
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
 black==24.1.1
 ruff==0.2.0

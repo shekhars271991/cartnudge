@@ -3,7 +3,6 @@ Pytest configuration and fixtures.
 """
 
 import pytest
-import asyncio
 from typing import AsyncGenerator
 
 from httpx import AsyncClient, ASGITransport
@@ -14,36 +13,40 @@ from app.core.dependencies import get_db
 from main import app
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
-async def test_db():
-    """Create test database connection."""
+@pytest.fixture(scope="function")
+async def mongo_client():
+    """Create a MongoDB client for tests."""
     client = AsyncIOMotorClient(settings.mongodb_url)
-    db = client["dataplatform_test"]
-    
-    yield db
-    
-    # Cleanup - drop test database
-    await client.drop_database("dataplatform_test")
+    yield client
     client.close()
 
 
-@pytest.fixture
-async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
-    """Create test client."""
+@pytest.fixture(scope="function")
+async def test_db(mongo_client: AsyncIOMotorClient):
+    """Create test database connection and clean up."""
+    db = mongo_client["dataplatform_test"]
     
-    async def override_get_db():
-        return test_db
+    # Clean up before each test
+    await db.pipelines.delete_many({})
+    await db.features.delete_many({})
+    await db.deployments.delete_many({})
+    await db.datablocks.delete_many({})
+    
+    yield db
+    
+    # Clean up after each test
+    await db.pipelines.delete_many({})
+    await db.features.delete_many({})
+    await db.deployments.delete_many({})
+    await db.datablocks.delete_many({})
+
+
+@pytest.fixture(scope="function")
+async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
+    """Create test client with mocked database."""
     
     # Override the dependency using FastAPI's dependency_overrides
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db] = lambda: test_db
     
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -53,12 +56,3 @@ async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
     
     # Clear the override
     app.dependency_overrides.clear()
-
-
-@pytest.fixture(autouse=True)
-async def cleanup_collections(test_db):
-    """Clean up collections before each test."""
-    await test_db.pipelines.delete_many({})
-    await test_db.features.delete_many({})
-    await test_db.deployments.delete_many({})
-    yield
