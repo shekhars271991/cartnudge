@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -29,188 +27,229 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "@/components/ui/tabs";
+import {
     Users,
     Package,
     Database,
-    Settings2,
+    ShoppingCart,
+    MousePointer,
+    CreditCard,
     Plus,
     Trash2,
     Edit2,
-    ChevronDown,
-    ChevronRight,
     Upload,
     Code,
     Copy,
     Check,
     FileUp,
-    FileText,
     X,
-    AlertCircle,
     CheckCircle2,
-    History,
-    RefreshCw,
     Clock,
-    XCircle,
-    Activity,
+    Zap,
+    FileSpreadsheet,
+    RefreshCw,
+    Settings2,
+    ChevronRight,
+    AlertCircle,
     Layers,
-    Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProject } from "@/contexts/ProjectContext";
 import { EmptyProjectState } from "@/components/EmptyProjectState";
 
 // Types
+type DataSourceType = "event" | "csv" | "api" | "hybrid";
+type DatablockStatus = "not_configured" | "configured" | "deployed" | "error";
+
 interface SchemaField {
     id: string;
     name: string;
-    type: "string" | "number" | "boolean" | "date" | "email" | "enum" | "array" | "object";
+    type: "string" | "number" | "boolean" | "date" | "email" | "array" | "object";
     required: boolean;
     description: string;
     isPrimaryKey: boolean;
-    enumValues?: string[];
 }
 
-interface DataModel {
+interface Datablock {
     id: string;
     name: string;
     displayName: string;
-    icon: "users" | "package" | "database";
     description: string;
-    isMandatory: boolean;
-    isConfigured: boolean;
+    icon: "users" | "package" | "cart" | "cursor" | "credit-card" | "database";
+    sourceType: DataSourceType;
+    status: DatablockStatus;
+    isPredefined: boolean;
     schema: SchemaField[];
     recordCount: number;
     lastSync: string | null;
+    eventTopic?: string;
+    apiEndpoint?: string;
 }
 
-interface IngestionLog {
-    id: string;
-    modelId: string;
-    modelName: string;
-    timestamp: string;
-    source: "csv" | "api" | "bulk_api";
-    status: "success" | "failed" | "processing";
-    rowsProcessed: number;
-    rowsFailed: number;
-    duration: string;
-    fileName?: string;
-    errorMessage?: string;
-}
-
-// Sample data models
-const initialModels: DataModel[] = [
+// Predefined datablocks for e-commerce nudge platform
+const predefinedDatablocks: Datablock[] = [
     {
-        id: "user",
-        name: "user",
-        displayName: "User",
+        id: "users",
+        name: "users",
+        displayName: "Users",
+        description: "Anonymous user profiles and behavioral attributes. No PII stored.",
         icon: "users",
-        description: "Customer profiles and attributes",
-        isMandatory: true,
-        isConfigured: true,
+        sourceType: "hybrid",
+        status: "not_configured",
+        isPredefined: true,
         schema: [
-            { id: "f1", name: "user_id", type: "string", required: true, description: "Unique user identifier", isPrimaryKey: true },
-            { id: "f2", name: "email", type: "email", required: true, description: "User email address", isPrimaryKey: false },
-            { id: "f3", name: "name", type: "string", required: true, description: "Full name", isPrimaryKey: false },
-            { id: "f4", name: "phone", type: "string", required: false, description: "Phone number", isPrimaryKey: false },
-            { id: "f5", name: "created_at", type: "date", required: true, description: "Account creation date", isPrimaryKey: false },
-            { id: "f6", name: "segment", type: "enum", required: false, description: "Customer segment", isPrimaryKey: false, enumValues: ["new", "regular", "vip", "churned"] },
+            { id: "u1", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: true },
+            { id: "u2", name: "created_at", type: "date", required: true, description: "Account creation date", isPrimaryKey: false },
+            { id: "u3", name: "segment", type: "string", required: false, description: "Customer segment", isPrimaryKey: false },
+            { id: "u4", name: "lifetime_value", type: "number", required: false, description: "Customer lifetime value", isPrimaryKey: false },
+            { id: "u5", name: "first_purchase_date", type: "date", required: false, description: "Date of first purchase", isPrimaryKey: false },
+            { id: "u6", name: "total_orders", type: "number", required: false, description: "Total number of orders", isPrimaryKey: false },
         ],
-        recordCount: 12847,
-        lastSync: "2 mins ago",
+        recordCount: 0,
+        lastSync: null,
+        eventTopic: "user.updated",
     },
     {
-        id: "product",
-        name: "product",
-        displayName: "Product",
+        id: "products",
+        name: "products",
+        displayName: "Products",
+        description: "Product catalog with pricing and inventory. Typically bulk imported from your catalog system.",
         icon: "package",
-        description: "Product catalog and inventory",
-        isMandatory: true,
-        isConfigured: true,
+        sourceType: "csv",
+        status: "not_configured",
+        isPredefined: true,
         schema: [
             { id: "p1", name: "product_id", type: "string", required: true, description: "Unique product identifier", isPrimaryKey: true },
             { id: "p2", name: "name", type: "string", required: true, description: "Product name", isPrimaryKey: false },
             { id: "p3", name: "category", type: "string", required: true, description: "Product category", isPrimaryKey: false },
             { id: "p4", name: "price", type: "number", required: true, description: "Current price", isPrimaryKey: false },
-            { id: "p5", name: "stock_quantity", type: "number", required: false, description: "Available stock", isPrimaryKey: false },
+            { id: "p5", name: "image_url", type: "string", required: false, description: "Product image URL", isPrimaryKey: false },
             { id: "p6", name: "is_active", type: "boolean", required: true, description: "Product availability", isPrimaryKey: false },
         ],
-        recordCount: 3542,
-        lastSync: "15 mins ago",
+        recordCount: 0,
+        lastSync: null,
+    },
+    {
+        id: "cart_events",
+        name: "cart_events",
+        displayName: "Cart Events",
+        description: "Real-time cart activity including add, remove, and checkout events. Essential for purchase prediction.",
+        icon: "cart",
+        sourceType: "event",
+        status: "not_configured",
+        isPredefined: true,
+        schema: [
+            { id: "c1", name: "event_id", type: "string", required: true, description: "Unique event identifier", isPrimaryKey: true },
+            { id: "c2", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: false },
+            { id: "c3", name: "session_id", type: "string", required: true, description: "Session identifier", isPrimaryKey: false },
+            { id: "c4", name: "event_type", type: "string", required: true, description: "Type: cart_add, cart_remove, checkout_start, purchase", isPrimaryKey: false },
+            { id: "c5", name: "product_id", type: "string", required: true, description: "Product involved", isPrimaryKey: false },
+            { id: "c6", name: "quantity", type: "number", required: true, description: "Quantity", isPrimaryKey: false },
+            { id: "c7", name: "cart_total", type: "number", required: false, description: "Current cart total", isPrimaryKey: false },
+            { id: "c8", name: "timestamp", type: "date", required: true, description: "Event timestamp", isPrimaryKey: false },
+        ],
+        recordCount: 0,
+        lastSync: null,
+        eventTopic: "cart.*",
+    },
+    {
+        id: "page_views",
+        name: "page_views",
+        displayName: "Page Views",
+        description: "Browsing behavior and page interactions. Used for engagement scoring.",
+        icon: "cursor",
+        sourceType: "event",
+        status: "not_configured",
+        isPredefined: true,
+        schema: [
+            { id: "pv1", name: "event_id", type: "string", required: true, description: "Unique event identifier", isPrimaryKey: true },
+            { id: "pv2", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: false },
+            { id: "pv3", name: "session_id", type: "string", required: true, description: "Session identifier", isPrimaryKey: false },
+            { id: "pv4", name: "page_type", type: "string", required: true, description: "Type: home, product, category, cart, checkout", isPrimaryKey: false },
+            { id: "pv5", name: "product_id", type: "string", required: false, description: "Product ID if on product page", isPrimaryKey: false },
+            { id: "pv6", name: "duration_seconds", type: "number", required: false, description: "Time spent on page", isPrimaryKey: false },
+            { id: "pv7", name: "timestamp", type: "date", required: true, description: "Event timestamp", isPrimaryKey: false },
+        ],
+        recordCount: 0,
+        lastSync: null,
+        eventTopic: "page.view",
+    },
+    {
+        id: "orders",
+        name: "orders",
+        displayName: "Orders",
+        description: "Completed purchase orders. Can be synced via events or bulk imported.",
+        icon: "credit-card",
+        sourceType: "hybrid",
+        status: "not_configured",
+        isPredefined: true,
+        schema: [
+            { id: "o1", name: "order_id", type: "string", required: true, description: "Unique order identifier", isPrimaryKey: true },
+            { id: "o2", name: "user_id", type: "string", required: true, description: "Anonymous user identifier", isPrimaryKey: false },
+            { id: "o3", name: "total_amount", type: "number", required: true, description: "Order total", isPrimaryKey: false },
+            { id: "o4", name: "status", type: "string", required: true, description: "Order status", isPrimaryKey: false },
+            { id: "o5", name: "item_count", type: "number", required: true, description: "Number of items in order", isPrimaryKey: false },
+            { id: "o6", name: "created_at", type: "date", required: true, description: "Order creation date", isPrimaryKey: false },
+        ],
+        recordCount: 0,
+        lastSync: null,
+        eventTopic: "order.created",
     },
 ];
 
-const sampleLogs: IngestionLog[] = [
-    {
-        id: "log_001",
-        modelId: "user",
-        modelName: "User",
-        timestamp: "2025-12-08T14:32:15Z",
-        source: "bulk_api",
-        status: "success",
-        rowsProcessed: 1500,
-        rowsFailed: 0,
-        duration: "3.2s",
+// Source type config
+const sourceTypeConfig: Record<DataSourceType, { label: string; description: string; icon: typeof Zap; color: string }> = {
+    event: {
+        label: "Real-time Events",
+        description: "Stream data via events",
+        icon: Zap,
+        color: "text-amber-600 bg-amber-50",
     },
-    {
-        id: "log_002",
-        modelId: "product",
-        modelName: "Product",
-        timestamp: "2025-12-08T12:15:00Z",
-        source: "csv",
-        status: "success",
-        rowsProcessed: 2500,
-        rowsFailed: 3,
-        duration: "8.5s",
-        fileName: "products_catalog.csv",
+    csv: {
+        label: "CSV Import",
+        description: "One-time file upload",
+        icon: FileSpreadsheet,
+        color: "text-blue-600 bg-blue-50",
     },
-    {
-        id: "log_003",
-        modelId: "user",
-        modelName: "User",
-        timestamp: "2025-12-07T18:45:30Z",
-        source: "api",
-        status: "failed",
-        rowsProcessed: 0,
-        rowsFailed: 1,
-        duration: "0.3s",
-        errorMessage: "Invalid email format",
+    api: {
+        label: "API Sync",
+        description: "Pull from external API",
+        icon: RefreshCw,
+        color: "text-violet-600 bg-violet-50",
     },
-    {
-        id: "log_004",
-        modelId: "user",
-        modelName: "User",
-        timestamp: "2025-12-07T10:20:00Z",
-        source: "bulk_api",
-        status: "success",
-        rowsProcessed: 5000,
-        rowsFailed: 12,
-        duration: "15.2s",
+    hybrid: {
+        label: "Hybrid",
+        description: "Import + event updates",
+        icon: Layers,
+        color: "text-emerald-600 bg-emerald-50",
     },
-];
+};
 
 export default function DataModeling() {
     const { selectedProject } = useProject();
-    const [models, setModels] = useState<DataModel[]>(initialModels);
-    const [selectedModel, setSelectedModel] = useState<DataModel | null>(null);
-    const [isSchemaDrawerOpen, setIsSchemaDrawerOpen] = useState(false);
-    const [isIngestionDrawerOpen, setIsIngestionDrawerOpen] = useState(false);
-    const [isLogsDrawerOpen, setIsLogsDrawerOpen] = useState(false);
-    const [isAddModelDialogOpen, setIsAddModelDialogOpen] = useState(false);
-    const [logs] = useState<IngestionLog[]>(sampleLogs);
-
-    // Schema editing state
+    
+    // State
+    const [datablocks, setDatablocks] = useState<Datablock[]>(predefinedDatablocks);
+    const [selectedDatablock, setSelectedDatablock] = useState<Datablock | null>(null);
+    const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingSchema, setEditingSchema] = useState<SchemaField[]>([]);
-    const [isEditingMode, setIsEditingMode] = useState(false);
-
-    // Ingestion state
-    const [ingestionTab, setIngestionTab] = useState<"api" | "csv">("api");
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
+    const [isEditingSchema, setIsEditingSchema] = useState(false);
+    const [activeTab, setActiveTab] = useState<"schema" | "ingest">("schema");
     const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
-
-    // New model state
-    const [newModelName, setNewModelName] = useState("");
-    const [newModelDescription, setNewModelDescription] = useState("");
+    
+    // New datablock state
+    const [newDatablock, setNewDatablock] = useState({
+        name: "",
+        displayName: "",
+        description: "",
+        sourceType: "event" as DataSourceType,
+    });
 
     // Show empty state if no project selected
     if (!selectedProject) {
@@ -222,1000 +261,718 @@ export default function DataModeling() {
         );
     }
 
-    const getModelIcon = (icon: DataModel["icon"]) => {
-        switch (icon) {
-            case "users":
-                return <Users className="h-5 w-5" />;
-            case "package":
-                return <Package className="h-5 w-5" />;
-            default:
-                return <Database className="h-5 w-5" />;
-        }
+    const getIcon = (icon: Datablock["icon"]) => {
+        const iconMap = {
+            users: Users,
+            package: Package,
+            cart: ShoppingCart,
+            cursor: MousePointer,
+            "credit-card": CreditCard,
+            database: Database,
+        };
+        const Icon = iconMap[icon];
+        return <Icon className="h-5 w-5" />;
     };
 
-    const handleOpenSchema = (model: DataModel) => {
-        setSelectedModel(model);
-        setEditingSchema([...model.schema]);
-        setIsEditingMode(false);
-        setIsSchemaDrawerOpen(true);
+    const getStatusBadge = (status: DatablockStatus) => {
+        const config = {
+            not_configured: { label: "Not Configured", class: "bg-slate-100 text-slate-600" },
+            configured: { label: "Ready to Deploy", class: "bg-amber-100 text-amber-700" },
+            deployed: { label: "Deployed", class: "bg-emerald-100 text-emerald-700" },
+            error: { label: "Error", class: "bg-red-100 text-red-700" },
+        };
+        return <Badge className={config[status].class}>{config[status].label}</Badge>;
     };
 
-    const handleOpenIngestion = (model: DataModel) => {
-        setSelectedModel(model);
-        setUploadedFile(null);
-        setIsIngestionDrawerOpen(true);
+    const handleOpenConfig = (datablock: Datablock) => {
+        setSelectedDatablock(datablock);
+        setEditingSchema([...datablock.schema]);
+        setIsEditingSchema(false);
+        setActiveTab("schema");
+        setIsConfigDrawerOpen(true);
+    };
+
+    const handleMarkConfigured = (datablockId: string) => {
+        setDatablocks(datablocks.map(db =>
+            db.id === datablockId ? { ...db, status: "configured" as DatablockStatus } : db
+        ));
     };
 
     const handleSaveSchema = () => {
-        if (selectedModel) {
-            setModels(models.map(m => 
-                m.id === selectedModel.id 
-                    ? { ...m, schema: editingSchema, isConfigured: true }
-                    : m
+        if (selectedDatablock) {
+            setDatablocks(datablocks.map(db =>
+                db.id === selectedDatablock.id ? { ...db, schema: editingSchema } : db
             ));
-            setIsEditingMode(false);
+            setIsEditingSchema(false);
         }
     };
 
     const handleAddField = () => {
-        const newField: SchemaField = {
-            id: `field_${Date.now()}`,
-            name: "",
-            type: "string",
-            required: false,
-            description: "",
-            isPrimaryKey: false,
-        };
-        setEditingSchema([...editingSchema, newField]);
+        setEditingSchema([
+            ...editingSchema,
+            {
+                id: `field_${Date.now()}`,
+                name: "",
+                type: "string",
+                required: false,
+                description: "",
+                isPrimaryKey: false,
+            },
+        ]);
     };
 
     const handleRemoveField = (fieldId: string) => {
         setEditingSchema(editingSchema.filter(f => f.id !== fieldId));
     };
 
-    const handleFieldChange = (fieldId: string, updates: Partial<SchemaField>) => {
-        setEditingSchema(editingSchema.map(f => 
-            f.id === fieldId ? { ...f, ...updates } : f
-        ));
-    };
-
-    const handleAddModel = () => {
-        if (!newModelName.trim()) return;
-        
-        const newModel: DataModel = {
-            id: `model_${Date.now()}`,
-            name: newModelName.toLowerCase().replace(/\s+/g, "_"),
-            displayName: newModelName,
+    const handleCreateDatablock = () => {
+        const newDb: Datablock = {
+            id: `custom_${Date.now()}`,
+            name: newDatablock.name.toLowerCase().replace(/\s+/g, "_"),
+            displayName: newDatablock.displayName,
+            description: newDatablock.description,
             icon: "database",
-            description: newModelDescription || `Custom ${newModelName} data model`,
-            isMandatory: false,
-            isConfigured: false,
-            schema: [],
+            sourceType: newDatablock.sourceType,
+            status: "not_configured",
+            isPredefined: false,
+            schema: [
+                { id: "f1", name: "id", type: "string", required: true, description: "Primary key", isPrimaryKey: true },
+            ],
             recordCount: 0,
             lastSync: null,
         };
-        
-        setModels([...models, newModel]);
-        setNewModelName("");
-        setNewModelDescription("");
-        setIsAddModelDialogOpen(false);
+        setDatablocks([...datablocks, newDb]);
+        setIsCreateDialogOpen(false);
+        setNewDatablock({ name: "", displayName: "", description: "", sourceType: "event" });
     };
 
-    const handleDeleteModel = (modelId: string) => {
-        const model = models.find(m => m.id === modelId);
-        if (model?.isMandatory) return;
-        setModels(models.filter(m => m.id !== modelId));
+    const handleDeleteDatablock = (datablockId: string) => {
+        setDatablocks(datablocks.filter(db => db.id !== datablockId));
+        setIsConfigDrawerOpen(false);
     };
 
-    // API endpoint configurations
-    const apiBaseUrl = import.meta.env.VITE_WEBHOOK_BASE_URL || "https://api.cartnudge.ai/v1";
-    const apiKey = import.meta.env.VITE_DEMO_SECRET_KEY || "cnk_sec_xxxxxxxxxxxxxxxxxxxx";
-
-    const generateSingleApiSnippet = () => {
-        if (!selectedModel) return "";
-        const sampleData = selectedModel.schema.reduce((acc, field) => {
-            let value: string | number | boolean = "";
-            switch (field.type) {
-                case "string": value = `"sample_${field.name}"`; break;
-                case "email": value = `"user@example.com"`; break;
-                case "number": value = 0; break;
-                case "boolean": value = true; break;
-                case "date": value = `"2025-01-01"`; break;
-                default: value = `"value"`;
-            }
-            return acc + `\n    "${field.name}": ${typeof value === "string" ? value : JSON.stringify(value)},`;
-        }, "");
-
-        return `curl -X POST "${apiBaseUrl}/${selectedModel.name}" \\
-  -H "Authorization: Bearer ${apiKey}" \\
-  -H "Content-Type: application/json" \\
-  -d '{${sampleData.slice(0, -1)}
-  }'`;
-    };
-
-    const generateBulkApiSnippet = () => {
-        if (!selectedModel) return "";
-        const sampleRecord = selectedModel.schema.reduce((acc, field) => {
-            let value: string | number | boolean = "";
-            switch (field.type) {
-                case "string": value = `"sample_${field.name}"`; break;
-                case "email": value = `"user@example.com"`; break;
-                case "number": value = 0; break;
-                case "boolean": value = true; break;
-                case "date": value = `"2025-01-01"`; break;
-                default: value = `"value"`;
-            }
-            return acc + `\n      "${field.name}": ${typeof value === "string" ? value : JSON.stringify(value)},`;
-        }, "");
-
-        return `curl -X POST "${apiBaseUrl}/${selectedModel.name}/bulk" \\
-  -H "Authorization: Bearer ${apiKey}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "records": [
-      {${sampleRecord.slice(0, -1)}
-      },
-      {${sampleRecord.slice(0, -1)}
-      }
-    ],
-    "options": {
-      "upsert": true,
-      "batch_size": 1000
-    }
-  }'`;
-    };
-
-    const generatePythonBulkSnippet = () => {
-        if (!selectedModel) return "";
-        const sampleRecord = selectedModel.schema.reduce((acc, field) => {
-            let value: string | number | boolean = "";
-            switch (field.type) {
-                case "string": value = `sample_${field.name}`; break;
-                case "email": value = "user@example.com"; break;
-                case "number": value = 0; break;
-                case "boolean": value = true; break;
-                case "date": value = "2025-01-01"; break;
-                default: value = "value";
-            }
-            acc[field.name] = value;
-            return acc;
-        }, {} as Record<string, string | number | boolean>);
-
-        return `import requests
-
-# Bulk load ${selectedModel.displayName} records
-records = [
-    ${JSON.stringify(sampleRecord, null, 4).replace(/"/g, "'").replace(/true/g, "True").replace(/false/g, "False")},
-    # ... more records
-]
-
-response = requests.post(
-    "${apiBaseUrl}/${selectedModel.name}/bulk",
-    headers={
-        "Authorization": "Bearer ${apiKey}",
-        "Content-Type": "application/json"
-    },
-    json={
-        "records": records,
-        "options": {
-            "upsert": True,
-            "batch_size": 1000
-        }
-    }
-)
-
-result = response.json()
-print(f"Processed: {result['processed']}, Failed: {result['failed']}")`;
-    };
-
-    const handleCopy = async (snippet: string, type: string) => {
-        await navigator.clipboard.writeText(snippet);
-        setCopiedSnippet(type);
+    const copyToClipboard = (text: string, id: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedSnippet(id);
         setTimeout(() => setCopiedSnippet(null), 2000);
     };
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file && file.type === "text/csv") {
-            setUploadedFile(file);
-        }
+    const generateEventSnippet = (datablock: Datablock) => {
+        return `// Send ${datablock.displayName} event
+fetch('https://api.cartnudge.ai/v1/events', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'YOUR_API_KEY'
+  },
+  body: JSON.stringify({
+    topic: '${datablock.eventTopic || datablock.name}',
+    data: {
+${datablock.schema.map(f => `      ${f.name}: ${f.type === 'string' ? '"value"' : f.type === 'number' ? '0' : f.type === 'boolean' ? 'true' : '"value"'}`).join(',\n')}
+    }
+  })
+});`;
     };
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setUploadedFile(file);
-        }
-    };
-
-    const formatTimestamp = (timestamp: string) => {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? "s" : ""} ago`;
-        if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-        if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
-        return date.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-    };
-
-    const getSourceBadge = (source: IngestionLog["source"]) => {
-        switch (source) {
-            case "api":
-                return <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">API</Badge>;
-            case "bulk_api":
-                return <Badge variant="outline" className="text-violet-600 border-violet-200 bg-violet-50">Bulk API</Badge>;
-            case "csv":
-                return <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">CSV</Badge>;
-        }
-    };
-
-    const getStatusIcon = (status: IngestionLog["status"]) => {
-        switch (status) {
-            case "success":
-                return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-            case "failed":
-                return <XCircle className="h-4 w-4 text-red-500" />;
-            case "processing":
-                return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
-        }
-    };
-
-    const totalRecords = models.reduce((acc, m) => acc + m.recordCount, 0);
-    const configuredModels = models.filter(m => m.isConfigured).length;
+    const deployedDatablocks = datablocks.filter(db => db.status === "deployed");
+    const configuredDatablocks = datablocks.filter(db => db.status === "configured");
+    const notConfiguredDatablocks = datablocks.filter(db => db.status === "not_configured");
 
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                        Data Modeling
-                    </h1>
+                    <h1 className="text-2xl font-bold text-slate-900">Data Modeling</h1>
                     <p className="text-slate-500 mt-1">
-                        Configure your data models and ingest data via API or CSV
+                        Define and configure your data schemas. Activate predefined models or create custom ones.
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => setIsLogsDrawerOpen(true)}
-                    >
-                        <History className="h-4 w-4" />
-                        Ingestion Logs
-                        <Badge variant="secondary" className="ml-1 bg-slate-200 text-slate-700">
-                            {logs.length}
-                        </Badge>
-                    </Button>
-                    <Button
-                        className="gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
-                        onClick={() => setIsAddModelDialogOpen(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Data Model
-                    </Button>
-                </div>
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Datablock
+                </Button>
             </div>
 
-            {/* Summary Stats */}
+            {/* Stats */}
             <div className="grid grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
-                    <CardContent className="p-5">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500">Data Models</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{models.length}</p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <Layers className="h-5 w-5 text-blue-600" />
-                            </div>
+                <div className="bg-white rounded-xl border p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
-                    <CardContent className="p-5">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500">Configured</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{configuredModels}/{models.length}</p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                            </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">{deployedDatablocks.length}</p>
+                            <p className="text-sm text-slate-500">Deployed</p>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
-                    <CardContent className="p-5">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500">Total Records</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{totalRecords.toLocaleString()}</p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center">
-                                <Database className="h-5 w-5 text-violet-600" />
-                            </div>
+                    </div>
+                </div>
+                <div className="bg-white rounded-xl border p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                            <Clock className="h-5 w-5 text-amber-600" />
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
-                    <CardContent className="p-5">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500">Ingestions Today</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{logs.filter(l => l.status === "success").length}</p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-cyan-100 flex items-center justify-center">
-                                <Activity className="h-5 w-5 text-cyan-600" />
-                            </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">{configuredDatablocks.length}</p>
+                            <p className="text-sm text-slate-500">Ready to Deploy</p>
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Data Models Grid */}
-            <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-slate-900">Data Models</h2>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {models.map((model) => (
-                        <Card key={model.id} className={cn(
-                            "relative overflow-hidden transition-all hover:shadow-md",
-                            model.isMandatory && "ring-1 ring-cyan-200"
-                        )}>
-                            {model.isMandatory && (
-                                <div className="absolute top-0 right-0">
-                                    <div className="bg-cyan-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-bl-md">
-                                        Required
-                                    </div>
-                                </div>
-                            )}
-                            <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "h-10 w-10 rounded-lg flex items-center justify-center",
-                                            model.icon === "users" && "bg-blue-100 text-blue-600",
-                                            model.icon === "package" && "bg-amber-100 text-amber-600",
-                                            model.icon === "database" && "bg-violet-100 text-violet-600"
-                                        )}>
-                                            {getModelIcon(model.icon)}
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-base">{model.displayName}</CardTitle>
-                                            <CardDescription className="text-xs mt-0.5">
-                                                {model.description}
-                                            </CardDescription>
-                                        </div>
-                                    </div>
-                                    {!model.isMandatory && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-slate-400 hover:text-red-500"
-                                            onClick={() => handleDeleteModel(model.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                                <div className="flex items-center gap-6 mb-4 text-sm">
-                                    <div>
-                                        <span className="text-slate-500">Fields:</span>{" "}
-                                        <span className="font-medium text-slate-700">{model.schema.length}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-500">Records:</span>{" "}
-                                        <span className="font-medium text-slate-700">{model.recordCount.toLocaleString()}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-500">Last sync:</span>{" "}
-                                        <span className="font-medium text-slate-700">{model.lastSync || "Never"}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="flex-1 gap-2"
-                                        onClick={() => handleOpenSchema(model)}
-                                    >
-                                        <Settings2 className="h-4 w-4" />
-                                        {model.isConfigured ? "View Schema" : "Configure Schema"}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="flex-1 gap-2"
-                                        onClick={() => handleOpenIngestion(model)}
-                                        disabled={!model.isConfigured}
-                                    >
-                                        <Upload className="h-4 w-4" />
-                                        Ingest Data
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    </div>
+                </div>
+                <div className="bg-white rounded-xl border p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                            <Database className="h-5 w-5 text-slate-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">{notConfiguredDatablocks.length}</p>
+                            <p className="text-sm text-slate-500">Not Configured</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white rounded-xl border p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <Zap className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">
+                                {datablocks.filter(db => db.sourceType === "event").length}
+                            </p>
+                            <p className="text-sm text-slate-500">Event Streams</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Schema Drawer */}
-            <Sheet open={isSchemaDrawerOpen} onOpenChange={setIsSchemaDrawerOpen}>
-                <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-                    <SheetHeader className="pb-4 border-b border-slate-200">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                {selectedModel && (
+            {/* Deployed Datablocks */}
+            {deployedDatablocks.length > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold text-slate-900">Deployed Datablocks</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                        {deployedDatablocks.map((datablock) => {
+                            const sourceConfig = sourceTypeConfig[datablock.sourceType];
+                            const SourceIcon = sourceConfig.icon;
+                            return (
+                                <div
+                                    key={datablock.id}
+                                    className="bg-white rounded-xl border p-5 hover:border-slate-300 transition-colors cursor-pointer"
+                                    onClick={() => handleOpenConfig(datablock)}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start gap-4">
+                                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white">
+                                                {getIcon(datablock.icon)}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-slate-900">{datablock.displayName}</h3>
+                                                    {getStatusBadge(datablock.status)}
+                                                </div>
+                                                <p className="text-sm text-slate-500 mt-1 line-clamp-1">{datablock.description}</p>
+                                                <div className="flex items-center gap-4 mt-2">
+                                                    <span className={cn("inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full", sourceConfig.color)}>
+                                                        <SourceIcon className="h-3 w-3" />
+                                                        {sourceConfig.label}
+                                                    </span>
+                                                    <span className="text-xs text-slate-400">
+                                                        {datablock.recordCount.toLocaleString()} records
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="h-5 w-5 text-slate-300" />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Configured (Ready to Deploy) */}
+            {configuredDatablocks.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-semibold text-slate-900">Ready to Deploy</h2>
+                            <p className="text-sm text-slate-500">These datablocks are configured and can be added to a deployment</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        {configuredDatablocks.map((datablock) => {
+                            const sourceConfig = sourceTypeConfig[datablock.sourceType];
+                            const SourceIcon = sourceConfig.icon;
+                            return (
+                                <div
+                                    key={datablock.id}
+                                    className="bg-white rounded-xl border border-amber-200 p-5 hover:border-amber-300 transition-colors cursor-pointer"
+                                    onClick={() => handleOpenConfig(datablock)}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start gap-4">
+                                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white">
+                                                {getIcon(datablock.icon)}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-slate-900">{datablock.displayName}</h3>
+                                                    {getStatusBadge(datablock.status)}
+                                                </div>
+                                                <p className="text-sm text-slate-500 mt-1 line-clamp-1">{datablock.description}</p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className={cn("inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full", sourceConfig.color)}>
+                                                        <SourceIcon className="h-3 w-3" />
+                                                        {sourceConfig.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="h-5 w-5 text-slate-300" />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Not Configured Datablocks */}
+            {notConfiguredDatablocks.length > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-lg font-semibold text-slate-900">Available Datablocks</h2>
+                    <p className="text-sm text-slate-500">Configure these datablocks to define your data schema</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        {notConfiguredDatablocks.map((datablock) => {
+                            const sourceConfig = sourceTypeConfig[datablock.sourceType];
+                            const SourceIcon = sourceConfig.icon;
+                            return (
+                                <div
+                                    key={datablock.id}
+                                    className="bg-white rounded-xl border border-dashed p-5 hover:border-slate-400 transition-colors cursor-pointer"
+                                    onClick={() => handleOpenConfig(datablock)}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start gap-4">
+                                            <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                                {getIcon(datablock.icon)}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-slate-900">{datablock.displayName}</h3>
+                                                    {datablock.isPredefined && (
+                                                        <Badge variant="outline" className="text-xs">Predefined</Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-slate-500 mt-1 line-clamp-2">{datablock.description}</p>
+                                                <div className="flex items-center gap-2 mt-3">
+                                                    <span className={cn("inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full", sourceConfig.color)}>
+                                                        <SourceIcon className="h-3 w-3" />
+                                                        {sourceConfig.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleOpenConfig(datablock);
+                                            }}
+                                        >
+                                            <Settings2 className="h-3 w-3 mr-1" />
+                                            Configure
+                                        </Button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Configuration Drawer */}
+            <Sheet open={isConfigDrawerOpen} onOpenChange={setIsConfigDrawerOpen}>
+                <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto">
+                    {selectedDatablock && (
+                        <>
+                            <SheetHeader>
+                                <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "h-10 w-10 rounded-lg flex items-center justify-center",
-                                        selectedModel.icon === "users" && "bg-blue-100 text-blue-600",
-                                        selectedModel.icon === "package" && "bg-amber-100 text-amber-600",
-                                        selectedModel.icon === "database" && "bg-violet-100 text-violet-600"
+                                        selectedDatablock.status === "active"
+                                            ? "bg-emerald-100 text-emerald-600"
+                                            : "bg-slate-100 text-slate-600"
                                     )}>
-                                        {getModelIcon(selectedModel.icon)}
+                                        {getIcon(selectedDatablock.icon)}
                                     </div>
-                                )}
-                                <div>
-                                    <SheetTitle className="text-xl font-semibold text-slate-900">
-                                        {selectedModel?.displayName} Schema
-                                    </SheetTitle>
-                                    <p className="text-sm text-slate-500 mt-0.5">
-                                        {selectedModel?.schema.length} fields defined
-                                    </p>
+                                    <div>
+                                        <SheetTitle>{selectedDatablock.displayName}</SheetTitle>
+                                        <p className="text-sm text-slate-500">{selectedDatablock.description}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {isEditingMode ? (
-                                    <>
-                                        <Button variant="outline" size="sm" onClick={() => {
-                                            setEditingSchema([...selectedModel!.schema]);
-                                            setIsEditingMode(false);
-                                        }}>
-                                            Cancel
-                                        </Button>
-                                        <Button size="sm" onClick={handleSaveSchema}>
-                                            Save Changes
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <Button variant="outline" size="sm" onClick={() => setIsEditingMode(true)}>
-                                        <Edit2 className="h-4 w-4 mr-2" />
-                                        Edit Schema
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </SheetHeader>
+                            </SheetHeader>
 
-                    <div className="py-6 space-y-4">
-                        {editingSchema.map((field, index) => (
-                            <div key={field.id} className={cn(
-                                "p-4 rounded-lg border",
-                                isEditingMode ? "bg-white border-slate-200" : "bg-slate-50 border-slate-100"
-                            )}>
-                                {isEditingMode ? (
-                                    <div className="space-y-4">
+                            <div className="mt-6">
+                                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "schema" | "ingest")}>
+                                    <TabsList className="w-full">
+                                        <TabsTrigger value="schema" className="flex-1">Schema</TabsTrigger>
+                                        <TabsTrigger value="ingest" className="flex-1">Data Ingestion</TabsTrigger>
+                                    </TabsList>
+
+                                    <TabsContent value="schema" className="mt-4 space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-slate-400">#{index + 1}</span>
-                                                {field.isPrimaryKey && (
-                                                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
-                                                        <Key className="h-3 w-3" />
-                                                        Primary Key
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-slate-400 hover:text-red-500"
-                                                onClick={() => handleRemoveField(field.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <p className="text-sm text-slate-500">
+                                                {editingSchema.length} fields defined
+                                            </p>
+                                            {isEditingSchema ? (
+                                                <div className="flex gap-2">
+                                                    <Button size="sm" variant="ghost" onClick={() => {
+                                                        setEditingSchema([...selectedDatablock.schema]);
+                                                        setIsEditingSchema(false);
+                                                    }}>
+                                                        Cancel
+                                                    </Button>
+                                                    <Button size="sm" onClick={handleSaveSchema}>
+                                                        <Check className="h-3 w-3 mr-1" />
+                                                        Save
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button size="sm" variant="outline" onClick={() => setIsEditingSchema(true)}>
+                                                    <Edit2 className="h-3 w-3 mr-1" />
+                                                    Edit Schema
+                                                </Button>
+                                            )}
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <Label className="text-xs">Field Name</Label>
-                                                <Input
-                                                    value={field.name}
-                                                    onChange={(e) => handleFieldChange(field.id, { name: e.target.value })}
-                                                    placeholder="field_name"
-                                                    className="mt-1 font-mono text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <Label className="text-xs">Data Type</Label>
-                                                <Select
-                                                    value={field.type}
-                                                    onValueChange={(v) => handleFieldChange(field.id, { type: v as SchemaField["type"] })}
+                                        <div className="space-y-2">
+                                            {editingSchema.map((field, index) => (
+                                                <div
+                                                    key={field.id}
+                                                    className={cn(
+                                                        "p-3 rounded-lg border",
+                                                        isEditingSchema ? "bg-white" : "bg-slate-50"
+                                                    )}
                                                 >
-                                                    <SelectTrigger className="mt-1">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="string">String</SelectItem>
-                                                        <SelectItem value="number">Number</SelectItem>
-                                                        <SelectItem value="boolean">Boolean</SelectItem>
-                                                        <SelectItem value="date">Date</SelectItem>
-                                                        <SelectItem value="email">Email</SelectItem>
-                                                        <SelectItem value="enum">Enum</SelectItem>
-                                                        <SelectItem value="array">Array</SelectItem>
-                                                        <SelectItem value="object">Object</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                    {isEditingSchema ? (
+                                                        <div className="space-y-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <Input
+                                                                    value={field.name}
+                                                                    onChange={(e) => {
+                                                                        const updated = [...editingSchema];
+                                                                        updated[index] = { ...field, name: e.target.value };
+                                                                        setEditingSchema(updated);
+                                                                    }}
+                                                                    placeholder="Field name"
+                                                                    className="flex-1"
+                                                                />
+                                                                <Select
+                                                                    value={field.type}
+                                                                    onValueChange={(v) => {
+                                                                        const updated = [...editingSchema];
+                                                                        updated[index] = { ...field, type: v as SchemaField["type"] };
+                                                                        setEditingSchema(updated);
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="w-32">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="string">String</SelectItem>
+                                                                        <SelectItem value="number">Number</SelectItem>
+                                                                        <SelectItem value="boolean">Boolean</SelectItem>
+                                                                        <SelectItem value="date">Date</SelectItem>
+                                                                        <SelectItem value="email">Email</SelectItem>
+                                                                        <SelectItem value="array">Array</SelectItem>
+                                                                        <SelectItem value="object">Object</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="text-red-500"
+                                                                    onClick={() => handleRemoveField(field.id)}
+                                                                    disabled={field.isPrimaryKey}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                            <div className="flex items-center gap-4">
+                                                                <label className="flex items-center gap-2 text-sm">
+                                                                    <Switch
+                                                                        checked={field.required}
+                                                                        onCheckedChange={(checked) => {
+                                                                            const updated = [...editingSchema];
+                                                                            updated[index] = { ...field, required: checked };
+                                                                            setEditingSchema(updated);
+                                                                        }}
+                                                                    />
+                                                                    Required
+                                                                </label>
+                                                                <label className="flex items-center gap-2 text-sm">
+                                                                    <Switch
+                                                                        checked={field.isPrimaryKey}
+                                                                        onCheckedChange={(checked) => {
+                                                                            const updated = editingSchema.map((f, i) => ({
+                                                                                ...f,
+                                                                                isPrimaryKey: i === index ? checked : false,
+                                                                            }));
+                                                                            setEditingSchema(updated);
+                                                                        }}
+                                                                    />
+                                                                    Primary Key
+                                                                </label>
+                                                            </div>
+                                                            <Input
+                                                                value={field.description}
+                                                                onChange={(e) => {
+                                                                    const updated = [...editingSchema];
+                                                                    updated[index] = { ...field, description: e.target.value };
+                                                                    setEditingSchema(updated);
+                                                                }}
+                                                                placeholder="Description"
+                                                                className="text-sm"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <code className="text-sm font-mono text-slate-700">{field.name}</code>
+                                                                <Badge variant="outline" className="text-xs">{field.type}</Badge>
+                                                                {field.required && <Badge className="bg-amber-100 text-amber-700 text-xs">Required</Badge>}
+                                                                {field.isPrimaryKey && <Badge className="bg-violet-100 text-violet-700 text-xs">PK</Badge>}
+                                                            </div>
+                                                            <span className="text-xs text-slate-400">{field.description}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {isEditingSchema && (
+                                            <Button variant="outline" className="w-full" onClick={handleAddField}>
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Add Field
+                                            </Button>
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="ingest" className="mt-4 space-y-6">
+                                        {/* Source Type Info */}
+                                        <div className="p-4 rounded-lg bg-slate-50 border">
+                                            <div className="flex items-center gap-3">
+                                                {(() => {
+                                                    const config = sourceTypeConfig[selectedDatablock.sourceType];
+                                                    const Icon = config.icon;
+                                                    return (
+                                                        <>
+                                                            <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", config.color)}>
+                                                                <Icon className="h-5 w-5" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium">{config.label}</p>
+                                                                <p className="text-sm text-slate-500">{config.description}</p>
+                                                            </div>
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <Label className="text-xs">Description</Label>
-                                            <Input
-                                                value={field.description}
-                                                onChange={(e) => handleFieldChange(field.id, { description: e.target.value })}
-                                                placeholder="Field description"
-                                                className="mt-1"
-                                            />
-                                        </div>
-
-                                        {field.type === "enum" && (
-                                            <div>
-                                                <Label className="text-xs">Enum Values (comma-separated)</Label>
-                                                <Input
-                                                    value={field.enumValues?.join(", ") || ""}
-                                                    onChange={(e) => handleFieldChange(field.id, { 
-                                                        enumValues: e.target.value.split(",").map(v => v.trim()).filter(Boolean) 
-                                                    })}
-                                                    placeholder="value1, value2, value3"
-                                                    className="mt-1 font-mono text-sm"
-                                                />
+                                        {/* Event-based ingestion */}
+                                        {(selectedDatablock.sourceType === "event" || selectedDatablock.sourceType === "hybrid") && (
+                                            <div className="space-y-3">
+                                                <h4 className="font-medium text-slate-900">Event Integration</h4>
+                                                <div className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-slate-400">// JavaScript SDK</span>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="text-slate-400 hover:text-white h-6"
+                                                            onClick={() => copyToClipboard(generateEventSnippet(selectedDatablock), "event")}
+                                                        >
+                                                            {copiedSnippet === "event" ? (
+                                                                <Check className="h-3 w-3" />
+                                                            ) : (
+                                                                <Copy className="h-3 w-3" />
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                    <pre className="whitespace-pre-wrap">{generateEventSnippet(selectedDatablock)}</pre>
+                                                </div>
                                             </div>
                                         )}
 
-                                        <div className="flex items-center gap-6">
-                                            <div className="flex items-center gap-2">
-                                                <Switch
-                                                    checked={field.required}
-                                                    onCheckedChange={(v) => handleFieldChange(field.id, { required: v })}
-                                                />
-                                                <Label className="text-sm">Required</Label>
+                                        {/* CSV Upload */}
+                                        {(selectedDatablock.sourceType === "csv" || selectedDatablock.sourceType === "hybrid") && (
+                                            <div className="space-y-3">
+                                                <h4 className="font-medium text-slate-900">CSV Import</h4>
+                                                <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                                                    <FileUp className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                                                    <p className="text-sm text-slate-600 mb-2">
+                                                        Drag and drop a CSV file, or click to browse
+                                                    </p>
+                                                    <p className="text-xs text-slate-400 mb-4">
+                                                        Supported: CSV files up to 100MB
+                                                    </p>
+                                                    <Button variant="outline">
+                                                        <Upload className="h-4 w-4 mr-2" />
+                                                        Upload CSV
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Switch
-                                                    checked={field.isPrimaryKey}
-                                                    onCheckedChange={(v) => handleFieldChange(field.id, { isPrimaryKey: v })}
-                                                />
-                                                <Label className="text-sm">Primary Key</Label>
+                                        )}
+
+                                        {/* API Sync */}
+                                        {selectedDatablock.sourceType === "api" && (
+                                            <div className="space-y-3">
+                                                <h4 className="font-medium text-slate-900">API Configuration</h4>
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <Label>API Endpoint URL</Label>
+                                                        <Input
+                                                            placeholder="https://api.example.com/data"
+                                                            className="mt-1.5"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label>Authentication Header</Label>
+                                                        <Input
+                                                            placeholder="Bearer your-api-key"
+                                                            className="mt-1.5"
+                                                        />
+                                                    </div>
+                                                    <Button className="w-full">
+                                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                                        Test & Sync
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-between">
+                                        )}
+                                    </TabsContent>
+                                </Tabs>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="mt-6 pt-4 border-t flex items-center justify-between">
+                                {!selectedDatablock.isPredefined && (
+                                    <Button
+                                        variant="ghost"
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        onClick={() => handleDeleteDatablock(selectedDatablock.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                )}
+                                <div className="flex gap-2 ml-auto">
+                                    {selectedDatablock.status === "not_configured" && (
+                                        <Button
+                                            onClick={() => {
+                                                handleMarkConfigured(selectedDatablock.id);
+                                                setIsConfigDrawerOpen(false);
+                                            }}
+                                        >
+                                            <Check className="h-4 w-4 mr-2" />
+                                            Save & Mark Ready
+                                        </Button>
+                                    )}
+                                    {selectedDatablock.status === "configured" && (
                                         <div className="flex items-center gap-3">
-                                            <code className="text-sm font-medium text-slate-900">{field.name}</code>
-                                            <Badge variant="outline" className="text-xs">{field.type}</Badge>
-                                            {field.required && (
-                                                <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">Required</Badge>
-                                            )}
-                                            {field.isPrimaryKey && (
-                                                <Badge className="bg-violet-100 text-violet-700 border-violet-200 text-xs gap-1">
-                                                    <Key className="h-3 w-3" />
-                                                    PK
-                                                </Badge>
-                                            )}
+                                            <p className="text-sm text-slate-500">
+                                                Go to Deployments to deploy this datablock
+                                            </p>
+                                            <Button variant="outline" onClick={() => setIsConfigDrawerOpen(false)}>
+                                                Close
+                                            </Button>
                                         </div>
-                                        <p className="text-xs text-slate-500">{field.description}</p>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-
-                        {isEditingMode && (
-                            <Button
-                                variant="outline"
-                                className="w-full gap-2 border-dashed"
-                                onClick={handleAddField}
-                            >
-                                <Plus className="h-4 w-4" />
-                                Add Field
-                            </Button>
-                        )}
-                    </div>
-                </SheetContent>
-            </Sheet>
-
-            {/* Ingestion Drawer */}
-            <Sheet open={isIngestionDrawerOpen} onOpenChange={setIsIngestionDrawerOpen}>
-                <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
-                    <SheetHeader className="pb-4 border-b border-slate-200">
-                        <div className="flex items-center gap-3">
-                            {selectedModel && (
-                                <div className={cn(
-                                    "h-10 w-10 rounded-lg flex items-center justify-center",
-                                    selectedModel.icon === "users" && "bg-blue-100 text-blue-600",
-                                    selectedModel.icon === "package" && "bg-amber-100 text-amber-600",
-                                    selectedModel.icon === "database" && "bg-violet-100 text-violet-600"
-                                )}>
-                                    {getModelIcon(selectedModel.icon)}
-                                </div>
-                            )}
-                            <div>
-                                <SheetTitle className="text-xl font-semibold text-slate-900">
-                                    Ingest {selectedModel?.displayName} Data
-                                </SheetTitle>
-                                <p className="text-sm text-slate-500 mt-0.5">
-                                    Import data via API (single or bulk) or CSV upload
-                                </p>
-                            </div>
-                        </div>
-                    </SheetHeader>
-
-                    <div className="py-6">
-                        <Tabs value={ingestionTab} onValueChange={(v) => setIngestionTab(v as "api" | "csv")}>
-                            <TabsList className="grid grid-cols-2 w-full max-w-[400px] mb-6">
-                                <TabsTrigger value="api" className="gap-2">
-                                    <Code className="h-4 w-4" />
-                                    API Endpoint
-                                </TabsTrigger>
-                                <TabsTrigger value="csv" className="gap-2">
-                                    <Upload className="h-4 w-4" />
-                                    CSV Upload
-                                </TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="api" className="space-y-6">
-                                {/* Single Record API */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-semibold text-slate-900">Single Record</h3>
-                                        <Badge variant="outline" className="text-xs">POST</Badge>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">POST</Badge>
-                                        <code className="text-sm font-mono text-slate-700 flex-1">
-                                            {apiBaseUrl}/{selectedModel?.name}
-                                        </code>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleCopy(`${apiBaseUrl}/${selectedModel?.name}`, "endpoint")}
-                                            className="h-8"
-                                        >
-                                            {copiedSnippet === "endpoint" ? (
-                                                <Check className="h-4 w-4 text-emerald-500" />
-                                            ) : (
-                                                <Copy className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                    <div className="relative">
-                                        <pre className="code-block bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm">
-                                            {generateSingleApiSnippet()}
-                                        </pre>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="absolute top-2 right-2 h-8 text-slate-400 hover:text-white hover:bg-slate-800"
-                                            onClick={() => handleCopy(generateSingleApiSnippet(), "single")}
-                                        >
-                                            {copiedSnippet === "single" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                {/* Bulk API */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-semibold text-slate-900">Bulk Load</h3>
-                                        <Badge className="bg-violet-100 text-violet-700 border-violet-200">Recommended</Badge>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                                        <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100">POST</Badge>
-                                        <code className="text-sm font-mono text-slate-700 flex-1">
-                                            {apiBaseUrl}/{selectedModel?.name}/bulk
-                                        </code>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleCopy(`${apiBaseUrl}/${selectedModel?.name}/bulk`, "bulk_endpoint")}
-                                            className="h-8"
-                                        >
-                                            {copiedSnippet === "bulk_endpoint" ? (
-                                                <Check className="h-4 w-4 text-emerald-500" />
-                                            ) : (
-                                                <Copy className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-
-                                    <Tabs defaultValue="curl" className="w-full">
-                                        <TabsList className="h-9 p-1">
-                                            <TabsTrigger value="curl" className="text-xs px-3">cURL</TabsTrigger>
-                                            <TabsTrigger value="python" className="text-xs px-3">Python</TabsTrigger>
-                                        </TabsList>
-
-                                        <TabsContent value="curl">
-                                            <div className="relative">
-                                                <pre className="code-block bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm">
-                                                    {generateBulkApiSnippet()}
-                                                </pre>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="absolute top-2 right-2 h-8 text-slate-400 hover:text-white hover:bg-slate-800"
-                                                    onClick={() => handleCopy(generateBulkApiSnippet(), "bulk_curl")}
-                                                >
-                                                    {copiedSnippet === "bulk_curl" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                        </TabsContent>
-
-                                        <TabsContent value="python">
-                                            <div className="relative">
-                                                <pre className="code-block bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm">
-                                                    {generatePythonBulkSnippet()}
-                                                </pre>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="absolute top-2 right-2 h-8 text-slate-400 hover:text-white hover:bg-slate-800"
-                                                    onClick={() => handleCopy(generatePythonBulkSnippet(), "bulk_python")}
-                                                >
-                                                    {copiedSnippet === "bulk_python" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                        </TabsContent>
-                                    </Tabs>
-
-                                    <div className="p-4 bg-violet-50 rounded-lg border border-violet-100">
-                                        <h4 className="text-sm font-medium text-violet-900 mb-2">Bulk Load Options</h4>
-                                        <ul className="text-xs text-violet-700 space-y-1">
-                                            <li>• <code className="bg-violet-100 px-1 rounded">upsert: true</code> - Updates existing records if primary key matches</li>
-                                            <li>• <code className="bg-violet-100 px-1 rounded">batch_size: 1000</code> - Process records in batches (max 10,000)</li>
-                                            <li>• Maximum 100,000 records per request</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </TabsContent>
-
-                            <TabsContent value="csv" className="space-y-4">
-                                <div
-                                    className={cn(
-                                        "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                                        isDragging ? "border-cyan-400 bg-cyan-50" : "border-slate-200 hover:border-slate-300"
                                     )}
-                                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                                    onDragLeave={() => setIsDragging(false)}
-                                    onDrop={handleDrop}
-                                    onClick={() => document.getElementById("csv-upload")?.click()}
-                                >
-                                    <input
-                                        id="csv-upload"
-                                        type="file"
-                                        accept=".csv"
-                                        className="hidden"
-                                        onChange={handleFileSelect}
-                                    />
-
-                                    {uploadedFile ? (
-                                        <div className="flex flex-col items-center">
-                                            <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-                                                <FileText className="h-6 w-6 text-emerald-600" />
-                                            </div>
-                                            <p className="text-sm font-medium text-slate-900 mb-1">{uploadedFile.name}</p>
-                                            <p className="text-xs text-slate-500 mb-3">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => { e.stopPropagation(); setUploadedFile(null); }}
-                                                    className="text-slate-500 hover:text-red-600"
-                                                >
-                                                    <X className="h-4 w-4 mr-1" />
-                                                    Remove
-                                                </Button>
-                                                <Button size="sm" onClick={(e) => e.stopPropagation()}>
-                                                    <Upload className="h-4 w-4 mr-2" />
-                                                    Start Import
-                                                </Button>
-                                            </div>
+                                    {selectedDatablock.status === "deployed" && (
+                                        <div className="flex items-center gap-3">
+                                            <p className="text-sm text-emerald-600">
+                                                This datablock is deployed and receiving data
+                                            </p>
+                                            <Button variant="outline" onClick={() => setIsConfigDrawerOpen(false)}>
+                                                Close
+                                            </Button>
                                         </div>
-                                    ) : (
-                                        <>
-                                            <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                                                <FileUp className="h-6 w-6 text-slate-400" />
-                                            </div>
-                                            <p className="text-sm font-medium text-slate-900 mb-1">Drop your CSV file here</p>
-                                            <p className="text-xs text-slate-500 mb-3">or click to browse</p>
-                                            <Badge variant="outline" className="text-xs">Supports .csv files up to 50MB</Badge>
-                                        </>
                                     )}
                                 </div>
-
-                                <div className="p-4 bg-slate-50 rounded-lg">
-                                    <p className="text-xs font-medium text-slate-600 mb-2">Expected CSV columns:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedModel?.schema.map((field) => (
-                                            <Badge
-                                                key={field.id}
-                                                variant="outline"
-                                                className={cn(
-                                                    "text-xs",
-                                                    field.required && "border-amber-300 bg-amber-50 text-amber-700"
-                                                )}
-                                            >
-                                                {field.name}
-                                                {field.required && " *"}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </div>
+                            </div>
+                        </>
+                    )}
                 </SheetContent>
             </Sheet>
 
-            {/* Logs Drawer */}
-            <Sheet open={isLogsDrawerOpen} onOpenChange={setIsLogsDrawerOpen}>
-                <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-                    <SheetHeader className="pb-4 border-b border-slate-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <SheetTitle className="text-xl font-semibold text-slate-900">
-                                    Ingestion Logs
-                                </SheetTitle>
-                                <p className="text-sm text-slate-500 mt-1">
-                                    History of all data imports across models
-                                </p>
-                            </div>
-                            <Button variant="outline" size="sm" className="gap-2">
-                                <RefreshCw className="h-4 w-4" />
-                                Refresh
-                            </Button>
-                        </div>
-                    </SheetHeader>
-
-                    {/* Summary Stats */}
-                    <div className="grid grid-cols-3 gap-4 py-4 border-b border-slate-100">
-                        <div className="text-center">
-                            <p className="text-2xl font-semibold text-slate-900">{logs.length}</p>
-                            <p className="text-xs text-slate-500">Total Imports</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-semibold text-emerald-600">
-                                {logs.filter(l => l.status === "success").length}
-                            </p>
-                            <p className="text-xs text-slate-500">Successful</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-semibold text-slate-900">
-                                {logs.reduce((acc, l) => acc + l.rowsProcessed, 0).toLocaleString()}
-                            </p>
-                            <p className="text-xs text-slate-500">Rows Processed</p>
-                        </div>
-                    </div>
-
-                    <div className="py-4 space-y-3">
-                        {logs.map((log) => (
-                            <div
-                                key={log.id}
-                                className={cn(
-                                    "p-4 rounded-lg border transition-colors",
-                                    log.status === "failed"
-                                        ? "bg-red-50/50 border-red-100"
-                                        : "bg-white border-slate-200 hover:border-slate-300"
-                                )}
-                            >
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                        {getStatusIcon(log.status)}
-                                        <span className="font-medium text-slate-900">{log.modelName}</span>
-                                        {getSourceBadge(log.source)}
-                                    </div>
-                                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        {formatTimestamp(log.timestamp)}
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-4 text-sm">
-                                    <div>
-                                        <p className="text-slate-500 text-xs mb-0.5">Rows Processed</p>
-                                        <p className="font-medium text-slate-700">
-                                            {log.rowsProcessed.toLocaleString()}
-                                            {log.rowsFailed > 0 && (
-                                                <span className="text-red-500 ml-1">({log.rowsFailed} failed)</span>
-                                            )}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-500 text-xs mb-0.5">Duration</p>
-                                        <p className="font-medium text-slate-700">{log.duration}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-500 text-xs mb-0.5">Status</p>
-                                        <p className={cn(
-                                            "font-medium capitalize",
-                                            log.status === "success" && "text-emerald-600",
-                                            log.status === "failed" && "text-red-600",
-                                            log.status === "processing" && "text-blue-600"
-                                        )}>
-                                            {log.status}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {log.fileName && (
-                                    <div className="mt-2 pt-2 border-t border-slate-100">
-                                        <p className="text-xs text-slate-500">
-                                            File: <span className="font-mono">{log.fileName}</span>
-                                        </p>
-                                    </div>
-                                )}
-
-                                {log.errorMessage && (
-                                    <div className="mt-2 pt-2 border-t border-red-100">
-                                        <p className="text-xs text-red-600">
-                                            Error: {log.errorMessage}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </SheetContent>
-            </Sheet>
-
-            {/* Add Model Dialog */}
-            <Dialog open={isAddModelDialogOpen} onOpenChange={setIsAddModelDialogOpen}>
-                <DialogContent className="sm:max-w-md">
+            {/* Create Datablock Dialog */}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add Data Model</DialogTitle>
+                        <DialogTitle>Create Custom Datablock</DialogTitle>
                         <DialogDescription>
-                            Create a custom data model to store additional entity types.
+                            Define a new data model for your specific needs.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div>
-                            <Label htmlFor="modelName">Model Name</Label>
+                            <Label>Display Name</Label>
                             <Input
-                                id="modelName"
-                                value={newModelName}
-                                onChange={(e) => setNewModelName(e.target.value)}
-                                placeholder="e.g., Order, Cart, Session"
+                                value={newDatablock.displayName}
+                                onChange={(e) => setNewDatablock({ ...newDatablock, displayName: e.target.value, name: e.target.value })}
+                                placeholder="e.g., Wishlist Items"
                                 className="mt-1.5"
                             />
                         </div>
                         <div>
-                            <Label htmlFor="modelDescription">Description (optional)</Label>
+                            <Label>Description</Label>
                             <Textarea
-                                id="modelDescription"
-                                value={newModelDescription}
-                                onChange={(e) => setNewModelDescription(e.target.value)}
-                                placeholder="Brief description of what this model represents"
+                                value={newDatablock.description}
+                                onChange={(e) => setNewDatablock({ ...newDatablock, description: e.target.value })}
+                                placeholder="Describe what data this datablock will hold..."
                                 className="mt-1.5"
+                                rows={2}
                             />
+                        </div>
+                        <div>
+                            <Label>Data Source Type</Label>
+                            <div className="grid grid-cols-2 gap-2 mt-1.5">
+                                {(Object.keys(sourceTypeConfig) as DataSourceType[]).map((type) => {
+                                    const config = sourceTypeConfig[type];
+                                    const Icon = config.icon;
+                                    return (
+                                        <button
+                                            key={type}
+                                            onClick={() => setNewDatablock({ ...newDatablock, sourceType: type })}
+                                            className={cn(
+                                                "p-3 rounded-lg border text-left transition-colors",
+                                                newDatablock.sourceType === type
+                                                    ? "border-blue-500 bg-blue-50"
+                                                    : "hover:border-slate-300"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Icon className="h-4 w-4" />
+                                                <span className="font-medium text-sm">{config.label}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-1">{config.description}</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddModelDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                             Cancel
                         </Button>
-                        <Button onClick={handleAddModel} disabled={!newModelName.trim()}>
-                            Create Model
+                        <Button
+                            onClick={handleCreateDatablock}
+                            disabled={!newDatablock.displayName.trim()}
+                        >
+                            Create Datablock
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1223,4 +980,3 @@ print(f"Processed: {result['processed']}, Failed: {result['failed']}")`;
         </div>
     );
 }
-
