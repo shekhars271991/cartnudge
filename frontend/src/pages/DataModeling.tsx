@@ -42,6 +42,9 @@ import {
     ChevronRight,
     Sparkles,
     LayoutTemplate,
+    Code,
+    Copy,
+    ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProject } from "@/contexts/ProjectContext";
@@ -55,6 +58,7 @@ import type {
     DataSourceType,
     SchemaField,
     IconType,
+    IntegrationDetails,
 } from "@/lib/api/dataplatform/types";
 import {
     DatablockStatus,
@@ -227,6 +231,9 @@ export default function DataModeling() {
     // Edit state
     const [editingDatablock, setEditingDatablock] = useState<Datablock | null>(null);
     const [editSchema, setEditSchema] = useState<SchemaField[]>([]);
+    const [integrationDetails, setIntegrationDetails] = useState<IntegrationDetails | null>(null);
+    const [isLoadingIntegration, setIsLoadingIntegration] = useState(false);
+    const [showIntegration, setShowIntegration] = useState(false);
 
     // Load datablocks when project changes
     const loadDatablocks = useCallback(async () => {
@@ -426,14 +433,34 @@ export default function DataModeling() {
     };
 
     // Edit handlers
-    const openEdit = (datablock: Datablock) => {
+    const openEdit = async (datablock: Datablock) => {
         setEditingDatablock(datablock);
         setEditSchema([...datablock.schema_fields]);
+        setShowIntegration(false);
+        setIntegrationDetails(null);
+        
+        // Load integration details for deployed datablocks
+        if (datablock.status === DatablockStatus.DEPLOYED && selectedProject) {
+            setIsLoadingIntegration(true);
+            try {
+                const details = await datablocksApi.getIntegrationDetails(
+                    selectedProject.id,
+                    datablock.id
+                );
+                setIntegrationDetails(details);
+            } catch (err) {
+                console.error("Failed to load integration details:", err);
+            } finally {
+                setIsLoadingIntegration(false);
+            }
+        }
     };
 
     const closeEdit = () => {
         setEditingDatablock(null);
         setEditSchema([]);
+        setIntegrationDetails(null);
+        setShowIntegration(false);
     };
 
     const handleSaveEdit = async () => {
@@ -1224,6 +1251,114 @@ export default function DataModeling() {
                                         Add Field
                                     </Button>
                                 </div>
+
+                                {/* Integration Details (for deployed datablocks) */}
+                                {editingDatablock.status === DatablockStatus.DEPLOYED && (
+                                    <div className="border-t pt-6">
+                                        <button
+                                            onClick={() => setShowIntegration(!showIntegration)}
+                                            className="flex items-center justify-between w-full text-left"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Code className="h-5 w-5 text-violet-500" />
+                                                <Label className="text-base cursor-pointer">API Integration</Label>
+                                            </div>
+                                            <ChevronRight className={cn(
+                                                "h-4 w-4 text-slate-400 transition-transform",
+                                                showIntegration && "rotate-90"
+                                            )} />
+                                        </button>
+                                        
+                                        {showIntegration && (
+                                            <div className="mt-4 space-y-4">
+                                                {isLoadingIntegration ? (
+                                                    <div className="flex items-center justify-center py-8">
+                                                        <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                                                        <span className="ml-2 text-slate-500">Loading integration details...</span>
+                                                    </div>
+                                                ) : integrationDetails ? (
+                                                    <>
+                                                        {/* Endpoint info */}
+                                                        <div className="p-4 bg-violet-50 rounded-lg space-y-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <div>
+                                                                    <p className="text-xs text-violet-600 font-medium">ENDPOINT</p>
+                                                                    <p className="text-sm font-mono text-violet-900">{integrationDetails.method} {integrationDetails.endpoint}</p>
+                                                                </div>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="ghost"
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(integrationDetails.endpoint);
+                                                                    }}
+                                                                >
+                                                                    <Copy className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-violet-600 font-medium">HEADERS</p>
+                                                                <div className="text-sm font-mono text-violet-900 mt-1">
+                                                                    {Object.entries(integrationDetails.headers).map(([key, value]) => (
+                                                                        <div key={key}>{key}: {value}</div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Example payload */}
+                                                        <div>
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <p className="text-sm font-medium text-slate-700">Example Payload</p>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="ghost"
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(JSON.stringify(integrationDetails.example_payload, null, 2));
+                                                                    }}
+                                                                >
+                                                                    <Copy className="h-4 w-4 mr-1" />
+                                                                    Copy
+                                                                </Button>
+                                                            </div>
+                                                            <pre className="p-4 bg-slate-900 text-slate-100 rounded-lg text-xs overflow-x-auto">
+{JSON.stringify(integrationDetails.example_payload, null, 2)}
+                                                            </pre>
+                                                        </div>
+
+                                                        {/* cURL example */}
+                                                        <div>
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <p className="text-sm font-medium text-slate-700">cURL Example</p>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="ghost"
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(integrationDetails.example_curl);
+                                                                    }}
+                                                                >
+                                                                    <Copy className="h-4 w-4 mr-1" />
+                                                                    Copy
+                                                                </Button>
+                                                            </div>
+                                                            <pre className="p-4 bg-slate-900 text-slate-100 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap">
+{integrationDetails.example_curl}
+                                                            </pre>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                                                            <ExternalLink className="h-4 w-4" />
+                                                            <span>Use this endpoint to send event data for this datablock</span>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="text-center py-4 text-slate-500">
+                                                        Failed to load integration details
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Footer */}

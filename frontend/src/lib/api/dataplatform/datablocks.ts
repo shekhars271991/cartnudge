@@ -11,6 +11,7 @@ import type {
   DatablockTemplate,
   DatablockTemplateListResponse,
   TemplateCategory,
+  IntegrationDetails,
 } from "./types";
 
 // Helper to normalize datablock (handle _id vs id and is_predefined vs from_template)
@@ -212,6 +213,23 @@ export const datablocksApi = {
       data
     );
     return normalizeDatablock(response.data);
+  },
+
+  // =========================================================================
+  // Integration Details
+  // =========================================================================
+
+  /**
+   * Get API integration details for a deployed datablock
+   */
+  getIntegrationDetails: async (
+    projectId: string,
+    datablockId: string
+  ): Promise<IntegrationDetails> => {
+    const response = await dataPlatformClient.get<IntegrationDetails>(
+      `/projects/${projectId}/datablocks/${datablockId}/integration`
+    );
+    return response.data;
   },
 };
 

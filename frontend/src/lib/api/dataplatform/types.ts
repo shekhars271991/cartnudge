@@ -111,6 +111,21 @@ export interface DatablockListResponse {
   total: number;
 }
 
+// Integration details for sending events to a datablock
+export interface IntegrationDetails {
+  datablock_name: string;
+  endpoint: string;
+  method: string;
+  headers: Record<string, string>;
+  example_payload: {
+    event_type: string;
+    user_id: string;
+    session_id?: string;
+    data: Record<string, unknown>;
+  };
+  example_curl: string;
+}
+
 // ============================================================================
 // Pipeline Types (for future use)
 // ============================================================================

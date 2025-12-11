@@ -70,6 +70,16 @@ class DatablockService:
         except Exception:
             return None
     
+    async def get_by_name(self, project_id: str, name: str) -> Optional[dict]:
+        """Get a datablock by name."""
+        datablock = await self.collection.find_one({
+            "project_id": project_id,
+            "name": name,
+        })
+        if datablock:
+            datablock["_id"] = str(datablock["_id"])
+        return datablock
+    
     async def create(self, project_id: str, data: DatablockCreate) -> dict:
         """Create a new custom datablock."""
         now = datetime.utcnow()

@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.db.mongodb import connect_to_mongo, close_mongo_connection, get_database
 from app.api.v1 import router as api_v1_router
 from app.services.datablock_template_service import DatablockTemplateService
+from app.services.kafka_producer import kafka_producer
 
 
 async def seed_templates():
@@ -41,7 +42,9 @@ async def lifespan(app: FastAPI):
     await seed_templates()
     
     yield
+    
     # Shutdown
+    await kafka_producer.stop()
     await close_mongo_connection()
 
 
