@@ -1,13 +1,17 @@
 """
 Datablock service - business logic for datablock management with MongoDB.
+
+Datablocks are user-created data schemas that can be:
+- Created from scratch (custom)
+- Created from a template (from_template=True, template_id set)
+
+Templates are stored in a separate collection (datablock_templates) and managed
+by the DatablockTemplateService.
 """
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import datetime
-from functools import lru_cache
-from pathlib import Path
 from typing import List, Optional
 
 from bson import ObjectId
@@ -19,45 +23,7 @@ from app.schemas.datablock import (
     DatablockStatus,
     IconType,
 )
-
-
-# Path to the templates data folder
-DATA_DIR = Path(__file__).parent.parent.parent / "data" / "templates"
-
-
-@lru_cache(maxsize=1)
-def _load_datablock_templates() -> List[dict]:
-    """
-    Load predefined datablock templates from JSON file.
-    
-    Cached to avoid reading the file on every request.
-    Call _load_datablock_templates.cache_clear() to reload.
-    """
-    templates_file = DATA_DIR / "datablocks.json"
-    
-    if not templates_file.exists():
-        return []
-    
-    with open(templates_file, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def get_predefined_templates() -> List[dict]:
-    """Get all predefined datablock templates."""
-    return _load_datablock_templates()
-
-
-def get_template_by_id(template_id: str) -> Optional[dict]:
-    """Get a specific predefined template by ID."""
-    for template in _load_datablock_templates():
-        if template["template_id"] == template_id:
-            return template
-    return None
-
-
-def reload_templates() -> None:
-    """Reload templates from file (clears cache)."""
-    _load_datablock_templates.cache_clear()
+from app.services.datablock_template_service import DatablockTemplateService
 
 
 class DatablockService:
@@ -66,18 +32,7 @@ class DatablockService:
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
         self.collection = db.datablocks
-    
-    # -------------------------------------------------------------------------
-    # Predefined Templates
-    # -------------------------------------------------------------------------
-    
-    def get_predefined_templates(self) -> List[dict]:
-        """Get all predefined datablock templates."""
-        return get_predefined_templates()
-    
-    def get_template_by_id(self, template_id: str) -> Optional[dict]:
-        """Get a specific predefined template by ID."""
-        return get_template_by_id(template_id)
+        self.template_service = DatablockTemplateService(db)
     
     # -------------------------------------------------------------------------
     # Datablock CRUD Operations
@@ -116,7 +71,7 @@ class DatablockService:
             return None
     
     async def create(self, project_id: str, data: DatablockCreate) -> dict:
-        """Create a new datablock."""
+        """Create a new custom datablock."""
         now = datetime.utcnow()
         
         # Generate unique IDs for schema fields
@@ -134,7 +89,8 @@ class DatablockService:
             "icon": data.icon.value if data.icon else IconType.DATABASE.value,
             "source_type": data.source_type.value,
             "status": DatablockStatus.NOT_CONFIGURED.value,
-            "is_predefined": False,
+            "from_template": False,  # Custom datablock, not from template
+            "template_id": None,
             "schema_fields": schema_fields,
             "record_count": 0,
             "last_sync": None,
@@ -152,8 +108,9 @@ class DatablockService:
     async def create_from_template(
         self, project_id: str, template_id: str, overrides: Optional[dict] = None
     ) -> Optional[dict]:
-        """Create a datablock from a predefined template."""
-        template = self.get_template_by_id(template_id)
+        """Create a datablock from a template."""
+        # Get template from the templates collection
+        template = await self.template_service.get_by_id(template_id)
         if not template:
             return None
         
@@ -174,7 +131,7 @@ class DatablockService:
             "icon": template["icon"],
             "source_type": template["source_type"],
             "status": DatablockStatus.NOT_CONFIGURED.value,
-            "is_predefined": True,
+            "from_template": True,  # Created from a template
             "template_id": template_id,
             "schema_fields": schema_fields,
             "record_count": 0,
@@ -193,6 +150,9 @@ class DatablockService:
         
         result = await self.collection.insert_one(datablock_doc)
         datablock_doc["_id"] = str(result.inserted_id)
+        
+        # Increment template usage count
+        await self.template_service.increment_usage(template_id)
         
         return datablock_doc
     

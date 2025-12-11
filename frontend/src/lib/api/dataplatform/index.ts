@@ -1,11 +1,12 @@
 /**
  * Data Platform Service API
  * 
- * Exports for datablocks, pipelines, and features
+ * Exports for datablocks, pipelines, features, and deployments
  */
 
 export { default as dataPlatformClient } from "./client";
 export { datablocksApi } from "./datablocks";
+export { deploymentsApi } from "./deployments";
 
 // Export types
 export type {
@@ -33,5 +34,21 @@ export type {
   FeatureCreate,
   FeatureUpdate,
   FeatureListResponse,
+  // Deployment types
+  ComponentType,
+  ChangeType,
+  DeploymentItemStatus,
+  DeploymentBucketStatus,
+  DeploymentStatusType,
+  DeploymentItem,
+  DeploymentItemCreate,
+  DeploymentBucket,
+  DeploymentBucketCreate,
+  DeploymentBucketListResponse,
+  Deployment,
+  DeploymentListResponse,
+  ConflictCheckResponse,
+  DeployRequest,
+  DeployResponse,
 } from "./types";
 

@@ -9,6 +9,9 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# Import centralized status definitions
+from app.core.statuses import DatablockStatus
+
 
 class DataSourceType(str, Enum):
     """Data source types for datablocks."""
@@ -16,15 +19,6 @@ class DataSourceType(str, Enum):
     CSV = "csv"
     API = "api"
     HYBRID = "hybrid"
-
-
-class DatablockStatus(str, Enum):
-    """Datablock status."""
-    NOT_CONFIGURED = "not_configured"
-    CONFIGURED = "configured"
-    READY_FOR_DEPLOYMENT = "ready_for_deployment"
-    DEPLOYED = "deployed"
-    ERROR = "error"
 
 
 class FieldType(str, Enum):
@@ -110,34 +104,34 @@ class DatablockResponse(DatablockBase):
     id: str = Field(..., alias="_id")
     project_id: str
     status: DatablockStatus
-    is_predefined: bool = False
+    from_template: bool = Field(False, description="Whether this datablock was created from a template")
+    template_id: Optional[str] = Field(None, description="ID of the template this was created from (if from_template=True)")
     schema_fields: List[SchemaFieldResponse] = []
     record_count: int = 0
     last_sync: Optional[datetime] = None
     event_topic: Optional[str] = None
     api_endpoint: Optional[str] = None
+    deployment_id: Optional[int] = Field(None, description="Deployment sequence number")
+    deployed_at: Optional[datetime] = None
+    deprecated_at: Optional[datetime] = None
+    deprecated_by_deployment: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+    
+    # Handle both old "is_predefined" and new "from_template" field names
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Custom validation to handle legacy field name."""
+        if isinstance(obj, dict):
+            # Convert is_predefined to from_template if present
+            if "is_predefined" in obj and "from_template" not in obj:
+                obj = obj.copy()
+                obj["from_template"] = obj.pop("is_predefined")
+        return super().model_validate(obj, **kwargs)
 
 
 class DatablockListResponse(BaseModel):
     """Schema for list of datablocks."""
     items: List[DatablockResponse]
     total: int
-
-
-# -----------------------------------------------------------------------------
-# Predefined Datablock Template
-# -----------------------------------------------------------------------------
-
-class PredefinedDatablockTemplate(BaseModel):
-    """Template for predefined datablocks."""
-    template_id: str
-    name: str
-    display_name: str
-    description: str
-    icon: IconType
-    source_type: DataSourceType
-    default_schema: List[SchemaFieldCreate]
-    event_topic: Optional[str] = None
 

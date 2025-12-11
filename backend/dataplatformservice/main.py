@@ -12,8 +12,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.mongodb import connect_to_mongo, close_mongo_connection
+from app.db.mongodb import connect_to_mongo, close_mongo_connection, get_database
 from app.api.v1 import router as api_v1_router
+from app.services.datablock_template_service import DatablockTemplateService
+
+
+async def seed_templates():
+    """Seed datablock templates from JSON file if they don't exist."""
+    try:
+        db = get_database()
+        template_service = DatablockTemplateService(db)
+        added_count = await template_service.seed_from_json()
+        if added_count > 0:
+            print(f"✓ Seeded {added_count} datablock templates")
+        else:
+            print("✓ Datablock templates already exist")
+    except Exception as e:
+        print(f"⚠ Warning: Failed to seed templates: {e}")
 
 
 @asynccontextmanager
@@ -21,6 +36,10 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     await connect_to_mongo()
+    
+    # Seed templates automatically
+    await seed_templates()
+    
     yield
     # Shutdown
     await close_mongo_connection()

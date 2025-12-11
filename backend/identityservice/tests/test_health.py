@@ -29,3 +29,5 @@ async def test_health_check(client: AsyncClient):
     assert "status" in data
     assert "dependencies" in data
 
+
+

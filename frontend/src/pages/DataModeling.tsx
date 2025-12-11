@@ -56,6 +56,11 @@ import type {
     SchemaField,
     IconType,
 } from "@/lib/api/dataplatform/types";
+import {
+    DatablockStatus,
+    DATABLOCK_HIDDEN_STATUSES,
+    DATABLOCK_ACTIVE_STATUSES,
+} from "@/lib/constants/statuses";
 
 // Source type config
 const sourceTypeConfig: Record<DataSourceType, { label: string; description: string; icon: typeof Zap; color: string; bgColor: string }> = {
@@ -92,6 +97,107 @@ const sourceTypeConfig: Record<DataSourceType, { label: string; description: str
 // Wizard steps
 type WizardStep = "choose" | "configure" | "review";
 
+// Schema field editor component - MUST be outside the main component to avoid re-renders
+interface SchemaFieldRowProps {
+    field: SchemaField;
+    index: number;
+    schema: SchemaField[];
+    setSchema: (s: SchemaField[]) => void;
+    onRemove: () => void;
+}
+
+function SchemaFieldRow({ field, index, schema, setSchema, onRemove }: SchemaFieldRowProps) {
+    return (
+        <div className="grid grid-cols-12 gap-3 items-start p-3 bg-slate-50 rounded-lg">
+            <div className="col-span-3">
+                <Input
+                    value={field.name}
+                    onChange={(e) => {
+                        const updated = [...schema];
+                        updated[index] = { ...field, name: e.target.value };
+                        setSchema(updated);
+                    }}
+                    placeholder="field_name"
+                    className="font-mono text-sm"
+                />
+            </div>
+            <div className="col-span-2">
+                <Select
+                    value={field.type}
+                    onValueChange={(v) => {
+                        const updated = [...schema];
+                        updated[index] = { ...field, type: v as SchemaField["type"] };
+                        setSchema(updated);
+                    }}
+                >
+                    <SelectTrigger className="text-sm">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="string">String</SelectItem>
+                        <SelectItem value="number">Number</SelectItem>
+                        <SelectItem value="boolean">Boolean</SelectItem>
+                        <SelectItem value="date">Date</SelectItem>
+                        <SelectItem value="array">Array</SelectItem>
+                        <SelectItem value="object">Object</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="col-span-4">
+                <Input
+                    value={field.description || ""}
+                    onChange={(e) => {
+                        const updated = [...schema];
+                        updated[index] = { ...field, description: e.target.value };
+                        setSchema(updated);
+                    }}
+                    placeholder="Description"
+                    className="text-sm"
+                />
+            </div>
+            <div className="col-span-2 flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs">
+                    <Switch
+                        checked={field.required}
+                        onCheckedChange={(checked) => {
+                            const updated = [...schema];
+                            updated[index] = { ...field, required: checked };
+                            setSchema(updated);
+                        }}
+                        className="scale-75"
+                    />
+                    Req
+                </label>
+                <label className="flex items-center gap-1.5 text-xs">
+                    <Switch
+                        checked={field.is_primary_key}
+                        onCheckedChange={(checked) => {
+                            const updated = schema.map((f, i) => ({
+                                ...f,
+                                is_primary_key: i === index ? checked : false,
+                            }));
+                            setSchema(updated);
+                        }}
+                        className="scale-75"
+                    />
+                    PK
+                </label>
+            </div>
+            <div className="col-span-1 flex justify-end">
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-slate-400 hover:text-red-500"
+                    onClick={onRemove}
+                    disabled={field.is_primary_key}
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 export default function DataModeling() {
     const { selectedProject } = useProject();
     
@@ -103,6 +209,7 @@ export default function DataModeling() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
     
     // Wizard state
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -120,19 +227,6 @@ export default function DataModeling() {
     // Edit state
     const [editingDatablock, setEditingDatablock] = useState<Datablock | null>(null);
     const [editSchema, setEditSchema] = useState<SchemaField[]>([]);
-
-    // Load templates on mount
-    useEffect(() => {
-        const loadTemplates = async () => {
-            try {
-                const templatesData = await datablocksApi.listTemplates();
-                setTemplates(templatesData);
-            } catch (err) {
-                console.error("Failed to load templates:", err);
-            }
-        };
-        loadTemplates();
-    }, []);
 
     // Load datablocks when project changes
     const loadDatablocks = useCallback(async () => {
@@ -180,7 +274,7 @@ export default function DataModeling() {
     };
 
     // Wizard handlers
-    const openWizard = () => {
+    const openWizard = async () => {
         setIsWizardOpen(true);
         setWizardStep("choose");
         setSelectedTemplateId(null);
@@ -192,6 +286,19 @@ export default function DataModeling() {
             sourceType: "event",
             schema: [],
         });
+        
+        // Load templates when wizard opens (only if not already loaded)
+        if (templates.length === 0) {
+            setIsLoadingTemplates(true);
+            try {
+                const templatesData = await datablocksApi.listTemplates();
+                setTemplates(templatesData);
+            } catch (err) {
+                console.error("Failed to load templates:", err);
+            } finally {
+                setIsLoadingTemplates(false);
+            }
+        }
     };
 
     const closeWizard = () => {
@@ -344,31 +451,58 @@ export default function DataModeling() {
                 })),
             };
             
-            const updated = await datablocksApi.update(
-                selectedProject.id,
-                editingDatablock.id,
-                updateData
-            );
+            // For deployed datablocks, add to deployment bucket instead of saving directly
+            const isDeployed = editingDatablock.status === DatablockStatus.DEPLOYED || editingDatablock.status === DatablockStatus.PENDING_UPDATE;
+            
+            let updated: Datablock;
+            if (isDeployed) {
+                // Add changes to deployment bucket
+                updated = await datablocksApi.addUpdateToBucket(
+                    selectedProject.id,
+                    editingDatablock.id,
+                    updateData
+                );
+            } else {
+                // Save directly for non-deployed datablocks
+                updated = await datablocksApi.update(
+                    selectedProject.id,
+                    editingDatablock.id,
+                    updateData
+                );
+            }
             
             setDatablocks(datablocks.map(db => db.id === updated.id ? updated : db));
             closeEdit();
         } catch (err) {
             console.error("Failed to save:", err);
+            alert("Failed to save changes.");
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteDatablock = async (datablockId: string) => {
-        if (!selectedProject) return;
-        if (!confirm("Are you sure you want to delete this datablock?")) return;
+        if (!selectedProject || !editingDatablock) return;
         
+        setIsSaving(true);
         try {
-            await datablocksApi.delete(selectedProject.id, datablockId);
-            setDatablocks(datablocks.filter(db => db.id !== datablockId));
+            // Call the API to mark for deletion (this also adds to deployment bucket)
+            const updatedDatablock = await datablocksApi.markPendingDeletion(
+                selectedProject.id,
+                datablockId
+            );
+            
+            // Update local state
+            setDatablocks(datablocks.map(db => 
+                db.id === datablockId ? updatedDatablock : db
+            ));
+            
             closeEdit();
         } catch (err) {
-            console.error("Failed to delete:", err);
+            console.error("Failed to mark for deletion:", err);
+            alert("Failed to mark datablock for deletion.");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -386,15 +520,21 @@ export default function DataModeling() {
         ]);
     };
 
-    // Categorize datablocks
-    const deployedDatablocks = datablocks.filter(db => db.status === "deployed");
-    const bucketDatablocks = datablocks.filter(db => db.status === "ready_for_deployment");
-    const activeDatablocks = datablocks.filter(db => db.status === "configured" || db.status === "not_configured");
-    
-    // Available templates (not yet activated)
-    const availableTemplates = templates.filter(
-        template => !datablocks.some(db => db.template_id === template.template_id)
+    // Filter out hidden statuses (discarded, deprecated, error)
+    const visibleDatablocks = datablocks.filter(db => 
+        !DATABLOCK_HIDDEN_STATUSES.includes(db.status)
     );
+    
+    // Categorize datablocks using centralized status constants
+    const deployedDatablocks = visibleDatablocks.filter(db => db.status === DatablockStatus.DEPLOYED);
+    const bucketDatablocks = visibleDatablocks.filter(db => db.status === DatablockStatus.READY_FOR_DEPLOYMENT);
+    const pendingDeletionDatablocks = visibleDatablocks.filter(db => db.status === DatablockStatus.PENDING_DELETION);
+    const pendingUpdateDatablocks = visibleDatablocks.filter(db => db.status === DatablockStatus.PENDING_UPDATE);
+    const activeDatablocks = visibleDatablocks.filter(db => DATABLOCK_ACTIVE_STATUSES.includes(db.status));
+    
+    // All templates are always available - templates are just blueprints
+    // Users can create multiple datablocks from the same template
+    const availableTemplates = templates;
 
     if (isLoading) {
         return (
@@ -417,109 +557,6 @@ export default function DataModeling() {
             </div>
         );
     }
-
-    // Schema field editor component
-    const SchemaFieldRow = ({ 
-        field, 
-        index, 
-        schema, 
-        setSchema,
-        onRemove 
-    }: { 
-        field: SchemaField;
-        index: number;
-        schema: SchemaField[];
-        setSchema: (s: SchemaField[]) => void;
-        onRemove: () => void;
-    }) => (
-        <div className="grid grid-cols-12 gap-3 items-start p-3 bg-slate-50 rounded-lg">
-            <div className="col-span-3">
-                <Input
-                    value={field.name}
-                    onChange={(e) => {
-                        const updated = [...schema];
-                        updated[index] = { ...field, name: e.target.value };
-                        setSchema(updated);
-                    }}
-                    placeholder="field_name"
-                    className="font-mono text-sm"
-                />
-            </div>
-            <div className="col-span-2">
-                <Select
-                    value={field.type}
-                    onValueChange={(v) => {
-                        const updated = [...schema];
-                        updated[index] = { ...field, type: v as SchemaField["type"] };
-                        setSchema(updated);
-                    }}
-                >
-                    <SelectTrigger className="text-sm">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="string">String</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="boolean">Boolean</SelectItem>
-                        <SelectItem value="date">Date</SelectItem>
-                        <SelectItem value="array">Array</SelectItem>
-                        <SelectItem value="object">Object</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="col-span-4">
-                <Input
-                    value={field.description || ""}
-                    onChange={(e) => {
-                        const updated = [...schema];
-                        updated[index] = { ...field, description: e.target.value };
-                        setSchema(updated);
-                    }}
-                    placeholder="Description"
-                    className="text-sm"
-                />
-            </div>
-            <div className="col-span-2 flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-xs">
-                    <Switch
-                        checked={field.required}
-                        onCheckedChange={(checked) => {
-                            const updated = [...schema];
-                            updated[index] = { ...field, required: checked };
-                            setSchema(updated);
-                        }}
-                        className="scale-75"
-                    />
-                    Req
-                </label>
-                <label className="flex items-center gap-1.5 text-xs">
-                    <Switch
-                        checked={field.is_primary_key}
-                        onCheckedChange={(checked) => {
-                            const updated = schema.map((f, i) => ({
-                                ...f,
-                                is_primary_key: i === index ? checked : false,
-                            }));
-                            setSchema(updated);
-                        }}
-                        className="scale-75"
-                    />
-                    PK
-                </label>
-            </div>
-            <div className="col-span-1 flex justify-end">
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-slate-400 hover:text-red-500"
-                    onClick={onRemove}
-                    disabled={field.is_primary_key}
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
-            </div>
-        </div>
-    );
 
     return (
         <div className="space-y-6">
@@ -556,7 +593,7 @@ export default function DataModeling() {
                             <Clock className="h-5 w-5 text-amber-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-slate-900">{bucketDatablocks.length}</p>
+                            <p className="text-2xl font-bold text-slate-900">{bucketDatablocks.length + pendingDeletionDatablocks.length + pendingUpdateDatablocks.length}</p>
                             <p className="text-sm text-slate-500">In Deployment Bucket</p>
                         </div>
                     </div>
@@ -568,7 +605,7 @@ export default function DataModeling() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-slate-900">{activeDatablocks.length}</p>
-                            <p className="text-sm text-slate-500">Active (Configuring)</p>
+                            <p className="text-sm text-slate-500">Active</p>
                         </div>
                     </div>
                 </div>
@@ -614,15 +651,16 @@ export default function DataModeling() {
             )}
 
             {/* Deployment Bucket */}
-            {bucketDatablocks.length > 0 && (
+            {(bucketDatablocks.length > 0 || pendingDeletionDatablocks.length > 0 || pendingUpdateDatablocks.length > 0) && (
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                         <Clock className="h-5 w-5 text-amber-500" />
                         Deployment Bucket
-                        <Badge className="bg-amber-100 text-amber-700">{bucketDatablocks.length}</Badge>
+                        <Badge className="bg-amber-100 text-amber-700">{bucketDatablocks.length + pendingDeletionDatablocks.length + pendingUpdateDatablocks.length}</Badge>
                     </h2>
                     <div className="bg-amber-50/50 rounded-xl border border-amber-200 p-4">
                         <div className="grid grid-cols-3 gap-4">
+                            {/* Items being added (new) */}
                             {bucketDatablocks.map((datablock) => {
                                 const sourceConfig = sourceTypeConfig[datablock.source_type];
                                 const Icon = getIcon(datablock.icon);
@@ -637,7 +675,10 @@ export default function DataModeling() {
                                                 <Icon className="h-5 w-5" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="font-semibold text-slate-900 truncate">{datablock.display_name}</h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-slate-900 truncate">{datablock.display_name}</h3>
+                                                    <Badge className="bg-green-100 text-green-700 text-xs">New</Badge>
+                                                </div>
                                                 <p className="text-sm text-slate-500 truncate">{datablock.description}</p>
                                                 <div className="flex items-center gap-2 mt-2">
                                                     <span className={cn("text-xs px-2 py-0.5 rounded-full", sourceConfig.bgColor, sourceConfig.color)}>
@@ -653,6 +694,68 @@ export default function DataModeling() {
                                     </div>
                                 );
                             })}
+                            {/* Items pending update (schema changes) */}
+                            {pendingUpdateDatablocks.map((datablock) => {
+                                const sourceConfig = sourceTypeConfig[datablock.source_type];
+                                const Icon = getIcon(datablock.icon);
+                                return (
+                                    <div
+                                        key={datablock.id}
+                                        className="bg-blue-50 rounded-lg border border-blue-200 p-4 hover:shadow-md transition-all cursor-pointer"
+                                        onClick={() => openEdit(datablock)}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                                                <Icon className="h-5 w-5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-slate-900 truncate">{datablock.display_name}</h3>
+                                                    <Badge className="bg-blue-100 text-blue-700 text-xs">Update</Badge>
+                                                </div>
+                                                <p className="text-sm text-slate-500 truncate">{datablock.description}</p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className={cn("text-xs px-2 py-0.5 rounded-full", sourceConfig.bgColor, sourceConfig.color)}>
+                                                        {sourceConfig.label}
+                                                    </span>
+                                                    <span className="text-xs text-slate-400">{datablock.schema_fields.length} fields</span>
+                                                </div>
+                                            </div>
+                                            <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-700">
+                                                <Edit2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {/* Items pending deletion */}
+                            {pendingDeletionDatablocks.map((datablock) => {
+                                const sourceConfig = sourceTypeConfig[datablock.source_type];
+                                return (
+                                    <div
+                                        key={datablock.id}
+                                        className="bg-red-50 rounded-lg border border-red-200 p-4 opacity-75"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+                                                <Trash2 className="h-5 w-5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-slate-900 truncate line-through">{datablock.display_name}</h3>
+                                                    <Badge className="bg-red-100 text-red-700 text-xs">Delete</Badge>
+                                                </div>
+                                                <p className="text-sm text-slate-500 truncate">{datablock.description}</p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className={cn("text-xs px-2 py-0.5 rounded-full opacity-50", sourceConfig.bgColor, sourceConfig.color)}>
+                                                        {sourceConfig.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -663,7 +766,7 @@ export default function DataModeling() {
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                         <Database className="h-5 w-5 text-blue-500" />
-                        Active (Configuring)
+                        Active
                     </h2>
                     <div className="grid grid-cols-3 gap-4">
                         {activeDatablocks.map((datablock) => {
@@ -697,7 +800,7 @@ export default function DataModeling() {
             )}
 
             {/* Empty State */}
-            {datablocks.length === 0 && (
+            {visibleDatablocks.length === 0 && (
                 <div className="text-center py-16 bg-slate-50 rounded-xl border-2 border-dashed">
                     <Database className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-slate-700 mb-2">No datablocks yet</h3>
@@ -768,45 +871,56 @@ export default function DataModeling() {
                                         <LayoutTemplate className="h-4 w-4 text-slate-400" />
                                         <span className="text-sm font-medium text-slate-700">Templates</span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {availableTemplates.map((template) => {
-                                            const isSelected = selectedTemplateId === template.template_id;
-                                            const sourceConfig = sourceTypeConfig[template.source_type];
-                                            const Icon = getIcon(template.icon);
-                                            return (
-                                                <div
-                                                    key={template.template_id}
-                                                    onClick={() => selectTemplate(template.template_id)}
-                                                    className={cn(
-                                                        "p-4 rounded-xl border-2 cursor-pointer transition-all",
-                                                        isSelected 
-                                                            ? "border-blue-500 bg-blue-50" 
-                                                            : "border-slate-200 hover:border-slate-300"
-                                                    )}
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        <div className={cn(
-                                                            "h-10 w-10 rounded-lg flex items-center justify-center",
-                                                            isSelected ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
-                                                        )}>
-                                                            <Icon className="h-5 w-5" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h4 className="font-semibold text-slate-900">{template.display_name}</h4>
-                                                            <p className="text-sm text-slate-500 line-clamp-2">{template.description}</p>
-                                                            <div className="flex items-center gap-2 mt-2">
-                                                                <span className={cn("text-xs px-2 py-0.5 rounded-full", sourceConfig.bgColor, sourceConfig.color)}>
-                                                                    {sourceConfig.label}
-                                                                </span>
-                                                                <span className="text-xs text-slate-400">{template.default_schema.length} fields</span>
+                                    {isLoadingTemplates ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                                            <span className="ml-2 text-slate-500">Loading templates...</span>
+                                        </div>
+                                    ) : availableTemplates.length === 0 ? (
+                                        <div className="text-center py-8 text-slate-500">
+                                            No templates available
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {availableTemplates.map((template) => {
+                                                const isSelected = selectedTemplateId === template.template_id;
+                                                const sourceConfig = sourceTypeConfig[template.source_type];
+                                                const Icon = getIcon(template.icon);
+                                                return (
+                                                    <div
+                                                        key={template.template_id}
+                                                        onClick={() => selectTemplate(template.template_id)}
+                                                        className={cn(
+                                                            "p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                                            isSelected 
+                                                                ? "border-blue-500 bg-blue-50" 
+                                                                : "border-slate-200 hover:border-slate-300"
+                                                        )}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={cn(
+                                                                "h-10 w-10 rounded-lg flex items-center justify-center",
+                                                                isSelected ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
+                                                            )}>
+                                                                <Icon className="h-5 w-5" />
                                                             </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="font-semibold text-slate-900">{template.display_name}</h4>
+                                                                <p className="text-sm text-slate-500 line-clamp-2">{template.description}</p>
+                                                                <div className="flex items-center gap-2 mt-2">
+                                                                    <span className={cn("text-xs px-2 py-0.5 rounded-full", sourceConfig.bgColor, sourceConfig.color)}>
+                                                                        {sourceConfig.label}
+                                                                    </span>
+                                                                    <span className="text-xs text-slate-400">{template.default_schema.length} fields</span>
+                                                                </div>
+                                                            </div>
+                                                            {isSelected && <Check className="h-5 w-5 text-blue-600 flex-shrink-0" />}
                                                         </div>
-                                                        {isSelected && <Check className="h-5 w-5 text-blue-600 flex-shrink-0" />}
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -1118,9 +1232,13 @@ export default function DataModeling() {
                                     variant="ghost"
                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                     onClick={() => handleDeleteDatablock(editingDatablock.id)}
+                                    disabled={isSaving || editingDatablock.status === DatablockStatus.PENDING_DELETION}
                                 >
                                     <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
+                                    {editingDatablock.status === DatablockStatus.PENDING_DELETION 
+                                        ? "Pending Deletion"
+                                        : "Mark for Deletion"
+                                    }
                                 </Button>
                                 <div className="flex gap-2">
                                     <Button variant="outline" onClick={closeEdit}>
@@ -1132,7 +1250,10 @@ export default function DataModeling() {
                                         ) : (
                                             <Check className="h-4 w-4 mr-2" />
                                         )}
-                                        Save Changes
+                                        {editingDatablock?.status === DatablockStatus.DEPLOYED || editingDatablock?.status === DatablockStatus.PENDING_UPDATE
+                                            ? "Add to Deployment Bucket"
+                                            : "Save Changes"
+                                        }
                                     </Button>
                                 </div>
                             </div>

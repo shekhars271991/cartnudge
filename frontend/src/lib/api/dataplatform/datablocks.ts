@@ -9,29 +9,48 @@ import type {
   DatablockUpdate,
   DatablockListResponse,
   DatablockTemplate,
+  DatablockTemplateListResponse,
+  TemplateCategory,
 } from "./types";
 
-// Helper to normalize datablock (handle _id vs id)
+// Helper to normalize datablock (handle _id vs id and is_predefined vs from_template)
 const normalizeDatablock = (datablock: Datablock): Datablock => {
+  // Handle both old is_predefined and new from_template field names
+  const fromTemplate = 
+    datablock.from_template ?? 
+    (datablock as unknown as { is_predefined?: boolean }).is_predefined ?? 
+    false;
+  
   return {
     ...datablock,
     id: datablock.id || datablock._id || "",
+    from_template: fromTemplate,
+  };
+};
+
+// Helper to normalize template
+const normalizeTemplate = (template: DatablockTemplate): DatablockTemplate => {
+  return {
+    ...template,
+    id: template.id || template._id || "",
   };
 };
 
 export const datablocksApi = {
   // =========================================================================
-  // Templates (public endpoints)
+  // Templates (from MongoDB collection)
   // =========================================================================
 
   /**
-   * List all predefined datablock templates
+   * List all datablock templates
    */
-  listTemplates: async (): Promise<DatablockTemplate[]> => {
-    const response = await dataPlatformClient.get<DatablockTemplate[]>(
-      "/datablocks/templates"
+  listTemplates: async (category?: TemplateCategory): Promise<DatablockTemplate[]> => {
+    const params = category ? { category } : {};
+    const response = await dataPlatformClient.get<DatablockTemplateListResponse>(
+      "/datablocks/templates",
+      { params }
     );
-    return response.data;
+    return response.data.items.map(normalizeTemplate);
   },
 
   /**
@@ -40,6 +59,16 @@ export const datablocksApi = {
   getTemplate: async (templateId: string): Promise<DatablockTemplate> => {
     const response = await dataPlatformClient.get<DatablockTemplate>(
       `/datablocks/templates/${templateId}`
+    );
+    return normalizeTemplate(response.data);
+  },
+
+  /**
+   * Seed templates from JSON file (admin use)
+   */
+  seedTemplates: async (): Promise<{ added_count: number; message: string }> => {
+    const response = await dataPlatformClient.post<{ added_count: number; message: string }>(
+      "/datablocks/templates/seed"
     );
     return response.data;
   },
@@ -153,6 +182,34 @@ export const datablocksApi = {
   ): Promise<Datablock> => {
     const response = await dataPlatformClient.post<Datablock>(
       `/projects/${projectId}/datablocks/${datablockId}/mark-deployed`
+    );
+    return normalizeDatablock(response.data);
+  },
+
+  /**
+   * Mark a datablock for pending deletion (adds to deployment bucket)
+   */
+  markPendingDeletion: async (
+    projectId: string,
+    datablockId: string
+  ): Promise<Datablock> => {
+    const response = await dataPlatformClient.post<Datablock>(
+      `/projects/${projectId}/datablocks/${datablockId}/mark-pending-deletion`
+    );
+    return normalizeDatablock(response.data);
+  },
+
+  /**
+   * Add schema update to deployment bucket (for deployed datablocks)
+   */
+  addUpdateToBucket: async (
+    projectId: string,
+    datablockId: string,
+    data: DatablockUpdate
+  ): Promise<Datablock> => {
+    const response = await dataPlatformClient.post<Datablock>(
+      `/projects/${projectId}/datablocks/${datablockId}/add-update-to-bucket`,
+      data
     );
     return normalizeDatablock(response.data);
   },

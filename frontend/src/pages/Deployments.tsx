@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -39,218 +39,91 @@ import {
     XCircle,
     AlertTriangle,
     Package,
-    User,
     Calendar,
-    ChevronRight,
     Trash2,
     Eye,
     Play,
     History,
-    Shield,
     Loader2,
     GitBranch,
     Plus,
     Minus,
     Edit,
+    RefreshCw,
+    Database,
+    Workflow,
+    Sparkles,
+    AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProject } from "@/contexts/ProjectContext";
 import { EmptyProjectState } from "@/components/EmptyProjectState";
-
-// Types
-interface DeploymentChange {
-    id: string;
-    type: "create" | "update" | "delete";
-    resourceType: "pipeline" | "event" | "field";
-    resourceName: string;
-    pipelineName: string;
-    description: string;
-    addedAt: Date;
-    addedBy: string;
-}
-
-interface Deployment {
-    id: string;
-    version: string;
-    status: "success" | "failed" | "in_progress" | "rolled_back";
-    deployedAt: Date;
-    deployedBy: string;
-    changes: DeploymentChange[];
-    duration: number; // in seconds
-    environment: "production" | "staging";
-}
-
-// Sample data
-const pendingChanges: DeploymentChange[] = [
-    {
-        id: "chg_1",
-        type: "create",
-        resourceType: "pipeline",
-        resourceName: "Cart Events",
-        pipelineName: "Cart Events",
-        description: "New pipeline created with 3 event types",
-        addedAt: new Date(Date.now() - 1000 * 60 * 30),
-        addedBy: "john@company.com",
-    },
-    {
-        id: "chg_2",
-        type: "update",
-        resourceType: "event",
-        resourceName: "add_to_cart",
-        pipelineName: "Cart Events",
-        description: "Added 2 new fields: discount_code, cart_value",
-        addedAt: new Date(Date.now() - 1000 * 60 * 20),
-        addedBy: "john@company.com",
-    },
-    {
-        id: "chg_3",
-        type: "create",
-        resourceType: "event",
-        resourceName: "checkout_started",
-        pipelineName: "Cart Events",
-        description: "New event type with 5 fields",
-        addedAt: new Date(Date.now() - 1000 * 60 * 15),
-        addedBy: "sarah@company.com",
-    },
-    {
-        id: "chg_4",
-        type: "update",
-        resourceType: "field",
-        resourceName: "price → sale_price",
-        pipelineName: "Browsing Events",
-        description: "Renamed field from price to sale_price",
-        addedAt: new Date(Date.now() - 1000 * 60 * 5),
-        addedBy: "john@company.com",
-    },
-];
-
-const deploymentHistory: Deployment[] = [
-    {
-        id: "dep_5",
-        version: "v1.4.0",
-        status: "success",
-        deployedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        deployedBy: "sarah@company.com",
-        changes: [
-            {
-                id: "chg_10",
-                type: "update",
-                resourceType: "pipeline",
-                resourceName: "Browsing Events",
-                pipelineName: "Browsing Events",
-                description: "Updated 3 event types",
-                addedAt: new Date(),
-                addedBy: "sarah@company.com",
-            },
-        ],
-        duration: 45,
-        environment: "production",
-    },
-    {
-        id: "dep_4",
-        version: "v1.3.0",
-        status: "success",
-        deployedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        deployedBy: "john@company.com",
-        changes: [
-            {
-                id: "chg_9",
-                type: "create",
-                resourceType: "pipeline",
-                resourceName: "Transaction Events",
-                pipelineName: "Transaction Events",
-                description: "New pipeline for transaction tracking",
-                addedAt: new Date(),
-                addedBy: "john@company.com",
-            },
-            {
-                id: "chg_8",
-                type: "create",
-                resourceType: "event",
-                resourceName: "purchase_completed",
-                pipelineName: "Transaction Events",
-                description: "New event type",
-                addedAt: new Date(),
-                addedBy: "john@company.com",
-            },
-        ],
-        duration: 62,
-        environment: "production",
-    },
-    {
-        id: "dep_3",
-        version: "v1.2.1",
-        status: "rolled_back",
-        deployedAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
-        deployedBy: "mike@company.com",
-        changes: [
-            {
-                id: "chg_7",
-                type: "delete",
-                resourceType: "field",
-                resourceName: "legacy_user_id",
-                pipelineName: "Browsing Events",
-                description: "Removed deprecated field",
-                addedAt: new Date(),
-                addedBy: "mike@company.com",
-            },
-        ],
-        duration: 38,
-        environment: "production",
-    },
-    {
-        id: "dep_2",
-        version: "v1.2.0",
-        status: "success",
-        deployedAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
-        deployedBy: "sarah@company.com",
-        changes: [
-            {
-                id: "chg_6",
-                type: "update",
-                resourceType: "event",
-                resourceName: "page_view",
-                pipelineName: "Browsing Events",
-                description: "Added referrer field",
-                addedAt: new Date(),
-                addedBy: "sarah@company.com",
-            },
-        ],
-        duration: 41,
-        environment: "production",
-    },
-    {
-        id: "dep_1",
-        version: "v1.1.0",
-        status: "success",
-        deployedAt: new Date(Date.now() - 1000 * 60 * 60 * 168),
-        deployedBy: "john@company.com",
-        changes: [
-            {
-                id: "chg_5",
-                type: "create",
-                resourceType: "pipeline",
-                resourceName: "Browsing Events",
-                pipelineName: "Browsing Events",
-                description: "Initial pipeline setup",
-                addedAt: new Date(),
-                addedBy: "john@company.com",
-            },
-        ],
-        duration: 55,
-        environment: "production",
-    },
-];
+import { deploymentsApi } from "@/lib/api/dataplatform";
+import type {
+    DeploymentBucket,
+    DeploymentItem,
+    Deployment,
+    DeploymentStatusType,
+    ChangeType,
+    ComponentType,
+    ConflictCheckResponse,
+} from "@/lib/api/dataplatform/types";
 
 export default function Deployments() {
     const { selectedProject } = useProject();
-    const [changes, setChanges] = useState(pendingChanges);
-    const [history] = useState(deploymentHistory);
+    
+    // State
+    const [bucket, setBucket] = useState<DeploymentBucket | null>(null);
+    const [deployments, setDeployments] = useState<Deployment[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isDeploying, setIsDeploying] = useState(false);
+    const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
     const [showDeployDialog, setShowDeployDialog] = useState(false);
     const [showHistoryDetail, setShowHistoryDetail] = useState<Deployment | null>(null);
+    const [showConflictDialog, setShowConflictDialog] = useState(false);
+    const [conflictCheck, setConflictCheck] = useState<ConflictCheckResponse | null>(null);
     const [deploymentNote, setDeploymentNote] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [error, setError] = useState<string | null>(null);
+
+    // Load data
+    const loadData = useCallback(async () => {
+        if (!selectedProject) return;
+        
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            // Load active bucket (may be null if no active bucket)
+            try {
+                const activeBucket = await deploymentsApi.getActiveBucket(selectedProject.id);
+                // Only set bucket if it's actually active
+                if (activeBucket && activeBucket.status === "active") {
+                    setBucket(activeBucket);
+                } else {
+                    setBucket(null);
+                }
+            } catch {
+                // No active bucket found - this is normal
+                setBucket(null);
+            }
+            
+            // Load deployment history
+            const historyResponse = await deploymentsApi.listDeployments(selectedProject.id, {
+                limit: 20,
+            });
+            setDeployments(historyResponse.items);
+        } catch (err) {
+            console.error("Failed to load deployment data:", err);
+            setError("Failed to load deployment data");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [selectedProject]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     // Show empty state if no project selected
     if (!selectedProject) {
@@ -262,44 +135,171 @@ export default function Deployments() {
         );
     }
 
-    const removeChange = (changeId: string) => {
-        setChanges((prev) => prev.filter((c) => c.id !== changeId));
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                    <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                    <p className="text-slate-600">{error}</p>
+                    <Button variant="outline" className="mt-4" onClick={loadData}>
+                        Retry
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    const removeItem = async (itemId: string) => {
+        if (!bucket || !selectedProject) return;
+        
+        try {
+            await deploymentsApi.removeItemFromBucket(
+                selectedProject.id,
+                bucket.id,
+                itemId
+            );
+            
+            // Update local state
+            setBucket({
+                ...bucket,
+                items: bucket.items.filter(i => i.id !== itemId),
+                item_count: bucket.item_count - 1,
+            });
+        } catch (err) {
+            console.error("Failed to remove item:", err);
+            alert("Failed to remove item from bucket.");
+        }
+    };
+
+    const handleCheckConflicts = async () => {
+        if (!bucket || !selectedProject) return;
+        
+        setIsCheckingConflicts(true);
+        try {
+            const result = await deploymentsApi.checkConflicts(
+                selectedProject.id,
+                bucket.id
+            );
+            setConflictCheck(result);
+            
+            if (result.has_conflicts) {
+                setShowConflictDialog(true);
+            } else {
+                setShowDeployDialog(true);
+            }
+        } catch (err) {
+            console.error("Failed to check conflicts:", err);
+            alert("Failed to check for conflicts.");
+        } finally {
+            setIsCheckingConflicts(false);
+        }
     };
 
     const handleDeploy = async () => {
+        if (!bucket || !selectedProject) return;
+        
         setIsDeploying(true);
-        // Simulate deployment
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        setIsDeploying(false);
-        setShowDeployDialog(false);
-        setChanges([]);
-        setDeploymentNote("");
+        try {
+            const result = await deploymentsApi.deploy(
+                selectedProject.id,
+                bucket.id,
+                { dry_run: false }
+            );
+            
+            if (result.success) {
+                // Refresh data - bucket will be null after successful deployment
+                setBucket(null);
+                await loadData();
+                setShowDeployDialog(false);
+                setDeploymentNote("");
+            } else {
+                // Check if bucket was already deployed
+                if (result.message?.includes("not active")) {
+                    // Bucket was already deployed, just refresh
+                    setBucket(null);
+                    await loadData();
+                    setShowDeployDialog(false);
+                } else {
+                    // Show detailed error info
+                    const errorDetails = result.errors?.length > 0 
+                        ? result.errors.map((e: { message?: string; component_name?: string }) => 
+                            `${e.component_name || 'Unknown'}: ${e.message || 'Unknown error'}`
+                          ).join('\n')
+                        : '';
+                    alert(`Deployment failed: ${result.message}\n\n${errorDetails}`);
+                }
+            }
+        } catch (err: unknown) {
+            console.error("Failed to deploy:", err);
+            const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+            // Check if it's an axios error with response data
+            const axiosError = err as { response?: { data?: { detail?: string } } };
+            const detail = axiosError.response?.data?.detail || errorMessage;
+            
+            // Check if the error is because bucket was already deployed
+            if (detail.includes("not active")) {
+                setBucket(null);
+                await loadData();
+                setShowDeployDialog(false);
+            } else {
+                alert(`Failed to execute deployment: ${detail}`);
+            }
+        } finally {
+            setIsDeploying(false);
+        }
     };
 
-    const getStatusIcon = (status: Deployment["status"]) => {
+    const handleDiscardBucket = async () => {
+        if (!bucket || !selectedProject) return;
+        
+        if (!confirm("Are you sure you want to discard this deployment bucket? All pending changes will be lost.")) {
+            return;
+        }
+        
+        try {
+            await deploymentsApi.discardBucket(selectedProject.id, bucket.id);
+            setBucket(null);
+            setShowConflictDialog(false);
+        } catch (err) {
+            console.error("Failed to discard bucket:", err);
+            alert("Failed to discard bucket.");
+        }
+    };
+
+    const getStatusIcon = (status: DeploymentStatusType) => {
         switch (status) {
             case "success":
                 return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
             case "failed":
                 return <XCircle className="h-4 w-4 text-red-500" />;
-            case "in_progress":
-                return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+            case "partial":
+                return <AlertTriangle className="h-4 w-4 text-amber-500" />;
             case "rolled_back":
                 return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+            default:
+                return <Clock className="h-4 w-4 text-slate-400" />;
         }
     };
 
-    const getStatusBadge = (status: Deployment["status"]) => {
+    const getStatusBadge = (status: DeploymentStatusType) => {
         const styles = {
             success: "bg-emerald-100 text-emerald-700",
             failed: "bg-red-100 text-red-700",
-            in_progress: "bg-blue-100 text-blue-700",
+            partial: "bg-amber-100 text-amber-700",
             rolled_back: "bg-amber-100 text-amber-700",
         };
         const labels = {
             success: "Deployed",
             failed: "Failed",
-            in_progress: "Deploying",
+            partial: "Partial",
             rolled_back: "Rolled Back",
         };
         return (
@@ -309,7 +309,7 @@ export default function Deployments() {
         );
     };
 
-    const getChangeIcon = (type: DeploymentChange["type"]) => {
+    const getChangeIcon = (type: ChangeType) => {
         switch (type) {
             case "create":
                 return <Plus className="h-3.5 w-3.5 text-emerald-500" />;
@@ -320,7 +320,19 @@ export default function Deployments() {
         }
     };
 
-    const formatTimeAgo = (date: Date) => {
+    const getComponentIcon = (type: ComponentType) => {
+        switch (type) {
+            case "datablock":
+                return <Database className="h-4 w-4" />;
+            case "pipeline":
+                return <Workflow className="h-4 w-4" />;
+            case "feature":
+                return <Sparkles className="h-4 w-4" />;
+        }
+    };
+
+    const formatTimeAgo = (dateStr: string) => {
+        const date = new Date(dateStr);
         const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
         if (seconds < 60) return "just now";
         const minutes = Math.floor(seconds / 60);
@@ -332,8 +344,10 @@ export default function Deployments() {
     };
 
     const filteredHistory = filterStatus === "all" 
-        ? history 
-        : history.filter((d) => d.status === filterStatus);
+        ? deployments 
+        : deployments.filter((d) => d.status === filterStatus);
+
+    const bucketItems = bucket?.items || [];
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
@@ -345,12 +359,10 @@ export default function Deployments() {
                         Review pending changes and deploy to production
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
-                        <Shield className="h-3.5 w-3.5" />
-                        Admin Access
-                    </Badge>
-                </div>
+                <Button variant="outline" onClick={loadData}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                </Button>
             </div>
 
             {/* Deployment Bucket */}
@@ -362,75 +374,97 @@ export default function Deployments() {
                                 <Package className="h-5 w-5 text-violet-600" />
                             </div>
                             <div>
-                                <CardTitle className="text-lg">Deployment Bucket</CardTitle>
+                                <CardTitle className="text-lg">
+                                    {bucket?.name || "Deployment Bucket"}
+                                </CardTitle>
                                 <CardDescription>
-                                    {changes.length} pending change{changes.length !== 1 ? "s" : ""} ready to deploy
+                                    {bucketItems.length} pending change{bucketItems.length !== 1 ? "s" : ""} ready to deploy
+                                    {bucket?.has_conflicts && (
+                                        <span className="text-red-500 ml-2">
+                                            (Has conflicts!)
+                                        </span>
+                                    )}
                                 </CardDescription>
                             </div>
                         </div>
-                        <Button
-                            onClick={() => setShowDeployDialog(true)}
-                            disabled={changes.length === 0}
-                            className="gap-2 bg-violet-600 hover:bg-violet-700"
-                        >
-                            <Rocket className="h-4 w-4" />
-                            Deploy All Changes
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            {bucket && bucketItems.length > 0 && (
+                                <Button
+                                    variant="outline"
+                                    onClick={handleDiscardBucket}
+                                    className="text-red-600 hover:text-red-700"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Discard
+                                </Button>
+                            )}
+                            <Button
+                                onClick={handleCheckConflicts}
+                                disabled={!bucket || bucketItems.length === 0 || isCheckingConflicts}
+                                className="gap-2 bg-violet-600 hover:bg-violet-700"
+                            >
+                                {isCheckingConflicts ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Rocket className="h-4 w-4" />
+                                )}
+                                Deploy All Changes
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {changes.length === 0 ? (
+                    {bucketItems.length === 0 ? (
                         <div className="text-center py-12 bg-slate-50 rounded-lg">
                             <CheckCircle2 className="h-12 w-12 text-emerald-300 mx-auto mb-3" />
                             <p className="text-slate-600 font-medium">All caught up!</p>
                             <p className="text-sm text-slate-400 mt-1">
-                                No pending changes to deploy
+                                No pending changes to deploy. Make changes in Data Modeling, Pipelines, or Feature Store to add items here.
                             </p>
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {changes.map((change) => (
+                            {bucketItems.map((item: DeploymentItem) => (
                                 <div
-                                    key={change.id}
+                                    key={item.id}
                                     className="flex items-center gap-4 p-3 bg-white border rounded-lg hover:bg-slate-50 transition-colors"
                                 >
                                     <div className={cn(
                                         "h-8 w-8 rounded-lg flex items-center justify-center",
-                                        change.type === "create" && "bg-emerald-100",
-                                        change.type === "update" && "bg-blue-100",
-                                        change.type === "delete" && "bg-red-100"
+                                        item.change_type === "create" && "bg-emerald-100",
+                                        item.change_type === "update" && "bg-blue-100",
+                                        item.change_type === "delete" && "bg-red-100"
                                     )}>
-                                        {getChangeIcon(change.type)}
+                                        {getChangeIcon(item.change_type)}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <span className="font-medium text-slate-900">
-                                                {change.resourceName}
+                                                {item.component_name}
                                             </span>
-                                            <Badge variant="outline" className="text-xs">
-                                                {change.resourceType}
+                                            <Badge variant="outline" className="text-xs gap-1">
+                                                {getComponentIcon(item.component_type)}
+                                                {item.component_type}
                                             </Badge>
-                                            <ChevronRight className="h-3 w-3 text-slate-300" />
-                                            <span className="text-sm text-slate-500">
-                                                {change.pipelineName}
-                                            </span>
+                                            {item.status === "conflict" && (
+                                                <Badge className="bg-red-100 text-red-700 text-xs">
+                                                    Conflict
+                                                </Badge>
+                                            )}
                                         </div>
                                         <p className="text-sm text-slate-500 truncate">
-                                            {change.description}
+                                            {item.change_summary || `${item.change_type} ${item.component_type}`}
                                         </p>
                                     </div>
                                     <div className="text-right shrink-0">
                                         <p className="text-xs text-slate-400">
-                                            {formatTimeAgo(change.addedAt)}
-                                        </p>
-                                        <p className="text-xs text-slate-400">
-                                            by {change.addedBy.split("@")[0]}
+                                            {formatTimeAgo(item.created_at)}
                                         </p>
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => removeChange(change.id)}
+                                        onClick={() => removeItem(item.id)}
                                         className="h-8 w-8 p-0 text-slate-400 hover:text-red-500"
                                     >
                                         <Trash2 className="h-4 w-4" />
@@ -465,84 +499,93 @@ export default function Deployments() {
                                 <SelectItem value="all">All deployments</SelectItem>
                                 <SelectItem value="success">Deployed</SelectItem>
                                 <SelectItem value="failed">Failed</SelectItem>
+                                <SelectItem value="partial">Partial</SelectItem>
                                 <SelectItem value="rolled_back">Rolled back</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[100px]">Version</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Changes</TableHead>
-                                <TableHead>Deployed By</TableHead>
-                                <TableHead>When</TableHead>
-                                <TableHead>Duration</TableHead>
-                                <TableHead className="w-[80px]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredHistory.map((deployment) => (
-                                <TableRow key={deployment.id} className="cursor-pointer hover:bg-slate-50">
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <GitBranch className="h-4 w-4 text-slate-400" />
-                                            <code className="text-sm font-mono font-medium">
-                                                {deployment.version}
-                                            </code>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            {getStatusIcon(deployment.status)}
-                                            {getStatusBadge(deployment.status)}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className="text-slate-600">
-                                            {deployment.changes.length} change{deployment.changes.length !== 1 ? "s" : ""}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center">
-                                                <User className="h-3.5 w-3.5 text-slate-500" />
-                                            </div>
-                                            <span className="text-sm text-slate-600">
-                                                {deployment.deployedBy.split("@")[0]}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-1.5 text-slate-500">
-                                            <Calendar className="h-3.5 w-3.5" />
-                                            <span className="text-sm">
-                                                {formatTimeAgo(deployment.deployedAt)}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-1.5 text-slate-500">
-                                            <Clock className="h-3.5 w-3.5" />
-                                            <span className="text-sm">{deployment.duration}s</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setShowHistoryDetail(deployment)}
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            <Eye className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
+                    {filteredHistory.length === 0 ? (
+                        <div className="text-center py-12 bg-slate-50 rounded-lg">
+                            <History className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                            <p className="text-slate-600 font-medium">No deployments yet</p>
+                            <p className="text-sm text-slate-400 mt-1">
+                                Your deployment history will appear here
+                            </p>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[100px]">Version</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Changes</TableHead>
+                                    <TableHead>When</TableHead>
+                                    <TableHead>Duration</TableHead>
+                                    <TableHead className="w-[80px]"></TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredHistory.map((deployment) => (
+                                    <TableRow key={deployment.id} className="cursor-pointer hover:bg-slate-50">
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <GitBranch className="h-4 w-4 text-slate-400" />
+                                                <code className="text-sm font-mono font-medium">
+                                                    #{deployment.deployment_id}
+                                                </code>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                {getStatusIcon(deployment.status)}
+                                                {getStatusBadge(deployment.status)}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600">
+                                                    {deployment.items_succeeded}/{deployment.items_total} items
+                                                </span>
+                                                {deployment.items_failed > 0 && (
+                                                    <Badge variant="outline" className="text-red-600 text-xs">
+                                                        {deployment.items_failed} failed
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1.5 text-slate-500">
+                                                <Calendar className="h-3.5 w-3.5" />
+                                                <span className="text-sm">
+                                                    {formatTimeAgo(deployment.created_at)}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1.5 text-slate-500">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                <span className="text-sm">
+                                                    {deployment.duration_ms ? `${Math.round(deployment.duration_ms / 1000)}s` : '-'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setShowHistoryDetail(deployment)}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
 
@@ -555,34 +598,38 @@ export default function Deployments() {
                             Deploy to Production
                         </DialogTitle>
                         <DialogDescription>
-                            You are about to deploy {changes.length} change{changes.length !== 1 ? "s" : ""} to production.
-                            This action will update your live pipeline configurations.
+                            You are about to deploy {bucketItems.length} change{bucketItems.length !== 1 ? "s" : ""} to production.
+                            This action will update your live configurations.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="py-4">
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                            <div className="flex items-start gap-2">
-                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-                                <div className="text-sm">
-                                    <p className="font-medium text-amber-800">Production deployment</p>
-                                    <p className="text-amber-700 mt-0.5">
-                                        These changes will affect live data collection immediately.
-                                    </p>
+                        {conflictCheck && !conflictCheck.has_conflicts && (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4">
+                                <div className="flex items-start gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" />
+                                    <div className="text-sm">
+                                        <p className="font-medium text-emerald-800">No conflicts detected</p>
+                                        <p className="text-emerald-700 mt-0.5">
+                                            Safe to deploy. Current version: #{conflictCheck.current_deployment_id}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                            {changes.map((change) => (
+                            {bucketItems.map((item: DeploymentItem) => (
                                 <div
-                                    key={change.id}
+                                    key={item.id}
                                     className="flex items-center gap-2 p-2 bg-slate-50 rounded text-sm"
                                 >
-                                    {getChangeIcon(change.type)}
-                                    <span className="font-medium">{change.resourceName}</span>
+                                    {getChangeIcon(item.change_type)}
+                                    <span className="font-medium">{item.component_name}</span>
                                     <span className="text-slate-400">·</span>
-                                    <span className="text-slate-500">{change.description}</span>
+                                    <span className="text-slate-500">
+                                        {item.change_summary || `${item.change_type} ${item.component_type}`}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -592,7 +639,7 @@ export default function Deployments() {
                                 Deployment Note (optional)
                             </label>
                             <Input
-                                placeholder="e.g., Adding cart tracking for Q4 campaign"
+                                placeholder="e.g., Adding new user tracking features"
                                 value={deploymentNote}
                                 onChange={(e) => setDeploymentNote(e.target.value)}
                             />
@@ -628,6 +675,62 @@ export default function Deployments() {
                 </DialogContent>
             </Dialog>
 
+            {/* Conflict Dialog */}
+            <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertTriangle className="h-5 w-5" />
+                            Deployment Conflicts Detected
+                        </DialogTitle>
+                        <DialogDescription>
+                            Other changes have been deployed since you started. You must discard your bucket and recreate your changes.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4">
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <p className="text-sm text-red-800">
+                                <strong>Current deployment:</strong> #{conflictCheck?.current_deployment_id}
+                                <br />
+                                <strong>Your bucket base:</strong> #{conflictCheck?.bucket_base_deployment_id || 0}
+                            </p>
+                        </div>
+
+                        {conflictCheck?.conflicts && conflictCheck.conflicts.length > 0 && (
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-slate-700">Conflicting items:</p>
+                                {conflictCheck.conflicts.map((conflict, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center gap-2 p-2 bg-red-50 rounded text-sm"
+                                    >
+                                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                                        <span className="text-red-700">{conflict.message}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowConflictDialog(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDiscardBucket}
+                            className="gap-2 bg-red-600 hover:bg-red-700"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Discard & Start Fresh
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Deployment Detail Dialog */}
             <Dialog open={!!showHistoryDetail} onOpenChange={() => setShowHistoryDetail(null)}>
                 <DialogContent className="sm:max-w-lg">
@@ -636,11 +739,11 @@ export default function Deployments() {
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
                                     <GitBranch className="h-5 w-5 text-slate-500" />
-                                    Deployment {showHistoryDetail.version}
+                                    Deployment #{showHistoryDetail.deployment_id}
                                 </DialogTitle>
                                 <DialogDescription>
-                                    Deployed on {showHistoryDetail.deployedAt.toLocaleDateString()} at{" "}
-                                    {showHistoryDetail.deployedAt.toLocaleTimeString()}
+                                    Deployed on {new Date(showHistoryDetail.created_at).toLocaleDateString()} at{" "}
+                                    {new Date(showHistoryDetail.created_at).toLocaleTimeString()}
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -654,13 +757,11 @@ export default function Deployments() {
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 rounded-lg p-3">
-                                        <p className="text-xs text-slate-500 mb-1">Deployed By</p>
+                                        <p className="text-xs text-slate-500 mb-1">Duration</p>
                                         <div className="flex items-center gap-2">
-                                            <div className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center">
-                                                <User className="h-3 w-3 text-slate-500" />
-                                            </div>
+                                            <Clock className="h-4 w-4 text-slate-400" />
                                             <span className="text-sm font-medium">
-                                                {showHistoryDetail.deployedBy}
+                                                {showHistoryDetail.duration_ms ? `${Math.round(showHistoryDetail.duration_ms / 1000)}s` : '-'}
                                             </span>
                                         </div>
                                     </div>
@@ -668,23 +769,92 @@ export default function Deployments() {
 
                                 <div>
                                     <p className="text-sm font-medium text-slate-700 mb-2">
-                                        Changes ({showHistoryDetail.changes.length})
+                                        Summary
                                     </p>
-                                    <div className="space-y-2">
-                                        {showHistoryDetail.changes.map((change) => (
-                                            <div
-                                                key={change.id}
-                                                className="flex items-center gap-2 p-2 bg-slate-50 rounded text-sm"
-                                            >
-                                                {getChangeIcon(change.type)}
-                                                <span className="font-medium">{change.resourceName}</span>
-                                                <Badge variant="outline" className="text-xs">
-                                                    {change.resourceType}
-                                                </Badge>
+                                    <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-500">Total Items</span>
+                                            <span className="font-medium">{showHistoryDetail.items_total}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-500">Succeeded</span>
+                                            <span className="font-medium text-emerald-600">{showHistoryDetail.items_succeeded}</span>
+                                        </div>
+                                        {showHistoryDetail.items_failed > 0 && (
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-slate-500">Failed</span>
+                                                <span className="font-medium text-red-600">{showHistoryDetail.items_failed}</span>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
+
+                                {showHistoryDetail.deployed_datablocks.length > 0 && (
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                                            <Database className="h-4 w-4" />
+                                            Datablocks ({showHistoryDetail.deployed_datablocks.length})
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {showHistoryDetail.deployed_datablocks.map((id) => (
+                                                <Badge key={id} variant="outline" className="text-xs">
+                                                    {id.slice(0, 8)}...
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {showHistoryDetail.deployed_pipelines.length > 0 && (
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                                            <Workflow className="h-4 w-4" />
+                                            Pipelines ({showHistoryDetail.deployed_pipelines.length})
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {showHistoryDetail.deployed_pipelines.map((id) => (
+                                                <Badge key={id} variant="outline" className="text-xs">
+                                                    {id.slice(0, 8)}...
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {showHistoryDetail.deployed_features.length > 0 && (
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                                            <Sparkles className="h-4 w-4" />
+                                            Features ({showHistoryDetail.deployed_features.length})
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {showHistoryDetail.deployed_features.map((id) => (
+                                                <Badge key={id} variant="outline" className="text-xs">
+                                                    {id.slice(0, 8)}...
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {showHistoryDetail.errors.length > 0 && (
+                                    <div>
+                                        <p className="text-sm font-medium text-red-700 mb-2">
+                                            Errors ({showHistoryDetail.errors.length})
+                                        </p>
+                                        <div className="space-y-2">
+                                            {showHistoryDetail.errors.map((error, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="p-2 bg-red-50 rounded text-sm text-red-700"
+                                                >
+                                                    <span className="font-medium">{error.component_name}: </span>
+                                                    {error.message}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <DialogFooter>
@@ -694,15 +864,6 @@ export default function Deployments() {
                                 >
                                     Close
                                 </Button>
-                                {showHistoryDetail.status === "success" && (
-                                    <Button
-                                        variant="outline"
-                                        className="gap-2 text-amber-600 border-amber-200 hover:bg-amber-50"
-                                    >
-                                        <AlertTriangle className="h-4 w-4" />
-                                        Rollback
-                                    </Button>
-                                )}
                             </DialogFooter>
                         </>
                     )}
@@ -711,4 +872,3 @@ export default function Deployments() {
         </div>
     );
 }
-

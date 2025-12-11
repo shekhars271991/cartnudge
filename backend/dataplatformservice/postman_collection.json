@@ -787,6 +787,261 @@
 			]
 		},
 		{
+			"name": "Deployments",
+			"description": "Deployment orchestration - manage deployment buckets, execute deployments, and track history.",
+			"item": [
+				{
+					"name": "Buckets",
+					"item": [
+						{
+							"name": "Create/Get Active Bucket",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"My Deployment\",\n    \"description\": \"Feature release deployment\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets"]
+								},
+								"description": "Create a new deployment bucket or get the existing active bucket for the user."
+							},
+							"response": []
+						},
+						{
+							"name": "List Buckets",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets?status=active",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets"],
+									"query": [
+										{"key": "status", "value": "active"}
+									]
+								},
+								"description": "List deployment buckets. Filter by status: active, deploying, deployed, discarded."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Active Bucket",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/active",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "active"]
+								},
+								"description": "Get the user's currently active deployment bucket."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Bucket by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}"]
+								},
+								"description": "Get a specific deployment bucket by ID."
+							},
+							"response": []
+						},
+						{
+							"name": "Discard Bucket",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}"]
+								},
+								"description": "Discard a deployment bucket. Use this to cancel pending changes."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Items",
+					"item": [
+						{
+							"name": "Add Item to Bucket",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"component_type\": \"datablock\",\n    \"component_id\": \"{{datablock_id}}\",\n    \"component_name\": \"Users Datablock\",\n    \"change_type\": \"create\",\n    \"change_summary\": \"Add users datablock for user profiles\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}/items",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}", "items"]
+								},
+								"description": "Add a component change to the deployment bucket. component_type: datablock, pipeline, feature. change_type: create, update, delete."
+							},
+							"response": []
+						},
+						{
+							"name": "Add Pipeline to Bucket",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"component_type\": \"pipeline\",\n    \"component_id\": \"{{pipeline_id}}\",\n    \"component_name\": \"User Events Pipeline\",\n    \"change_type\": \"update\",\n    \"change_summary\": \"Update pipeline with new event types\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}/items",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}", "items"]
+								},
+								"description": "Add a pipeline change to the deployment bucket."
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Item from Bucket",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}/items/{{item_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}", "items", "{{item_id}}"]
+								},
+								"description": "Remove a component from the deployment bucket."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Deploy",
+					"item": [
+						{
+							"name": "Check Conflicts",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}/check-conflicts",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}", "check-conflicts"]
+								},
+								"description": "Check if there are any conflicts with other deployments before deploying."
+							},
+							"response": []
+						},
+						{
+							"name": "Execute Deployment (Dry Run)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"dry_run\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}/deploy",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}", "deploy"]
+								},
+								"description": "Simulate deployment without making changes. Useful for validation."
+							},
+							"response": []
+						},
+						{
+							"name": "Execute Deployment",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"dry_run\": false,\n    \"force\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployment-buckets/{{bucket_id}}/deploy",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployment-buckets", "{{bucket_id}}", "deploy"]
+								},
+								"description": "Execute deployment. Deploys all items in the bucket in sequence: datablocks -> pipelines -> features."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "History",
+					"item": [
+						{
+							"name": "List Deployments",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployments",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployments"]
+								},
+								"description": "List deployment history for the project."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Current Deployment ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployments/current",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployments", "current"]
+								},
+								"description": "Get the current (latest) deployment ID for the project."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Deployment Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/projects/{{project_id}}/deployments/1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "projects", "{{project_id}}", "deployments", "1"]
+								},
+								"description": "Get details of a specific deployment by its sequence number."
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "Health",
 			"item": [
 				{
@@ -818,6 +1073,18 @@
 					"response": []
 				}
 			]
+		}
+	],
+	"variable": [
+		{
+			"key": "bucket_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "item_id",
+			"value": "",
+			"type": "string"
 		}
 	]
 }

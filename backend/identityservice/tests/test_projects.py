@@ -129,3 +129,5 @@ async def test_delete_project(client: AsyncClient, auth_headers: dict, project: 
     )
     assert response.status_code == 404
 
+
+

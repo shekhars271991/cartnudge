@@ -105,3 +105,5 @@ async def test_delete_account(client: AsyncClient, auth_headers: dict):
     )
     assert response.status_code == 401
 
+
+

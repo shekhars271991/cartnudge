@@ -202,3 +202,5 @@ async def test_forgot_password_nonexistent(client: AsyncClient):
     # Should return same response to not reveal if email exists
     assert response.status_code == 200
 
+
+
