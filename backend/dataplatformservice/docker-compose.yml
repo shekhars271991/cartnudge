@@ -205,6 +205,54 @@ services:
         max-file: "2"
 
   # ==========================================================================
+  # Feature Aggregation Job - Computes user features from ClickHouse → Aerospike
+  # Runs every AGGREGATION_INTERVAL_SECONDS (default: 5)
+  # ==========================================================================
+  feature-aggregator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dataplatform-feature-aggregator
+    command: ["python", "-m", "runtime.jobs.feature_aggregation_job"]
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      aerospike:
+        condition: service_healthy
+    ports:
+      - "8012:8012"  # Health check endpoint
+    environment:
+      # ClickHouse connection
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: cartnudge
+      CLICKHOUSE_PASSWORD: cartnudge_dev
+      CLICKHOUSE_DATABASE: events
+      # Aerospike connection
+      AEROSPIKE_HOSTS: aerospike:3000
+      AEROSPIKE_NAMESPACE: test
+      # Job configuration
+      AGGREGATION_INTERVAL_SECONDS: "5"
+      DAYS_ACTIVE: "30"
+      FEATURE_TTL_DAYS: "7"
+      BATCH_SIZE: "100"
+      HEALTH_CHECK_PORT: "8012"
+      # Python settings
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  # ==========================================================================
   # Development Tools
   # ==========================================================================
   kafka-ui:

@@ -1,0 +1,324 @@
+{
+  "description": "Feature definitions for user feature store. Used for churn prediction and personalization.",
+  "version": "1.0",
+  "feature_groups": [
+    {
+      "group_id": "cart_behavior",
+      "name": "Cart Behavior Features",
+      "description": "Features derived from shopping cart activity",
+      "features": [
+        {
+          "name": "cart_adds_7d",
+          "type": "int",
+          "description": "Number of cart add events in last 7 days",
+          "aggregation": "count",
+          "source_table": "cart_events",
+          "filter": "event_type = 'cart.add'",
+          "window_days": 7
+        },
+        {
+          "name": "cart_adds_30d",
+          "type": "int",
+          "description": "Number of cart add events in last 30 days",
+          "aggregation": "count",
+          "source_table": "cart_events",
+          "filter": "event_type = 'cart.add'",
+          "window_days": 30
+        },
+        {
+          "name": "cart_removes_30d",
+          "type": "int",
+          "description": "Number of cart remove events in last 30 days",
+          "aggregation": "count",
+          "source_table": "cart_events",
+          "filter": "event_type = 'cart.remove'",
+          "window_days": 30
+        },
+        {
+          "name": "cart_abandonment_rate",
+          "type": "float",
+          "description": "Ratio of cart adds to checkouts (higher = more abandonment)",
+          "aggregation": "computed",
+          "formula": "cart_adds_30d / NULLIF(checkouts_30d, 0)",
+          "window_days": 30
+        },
+        {
+          "name": "avg_cart_value_30d",
+          "type": "float",
+          "description": "Average cart value in last 30 days",
+          "aggregation": "avg",
+          "source_table": "cart_events",
+          "field": "cart_total",
+          "window_days": 30
+        },
+        {
+          "name": "unique_products_carted_30d",
+          "type": "int",
+          "description": "Number of unique products added to cart in last 30 days",
+          "aggregation": "count_distinct",
+          "source_table": "cart_events",
+          "field": "product_id",
+          "filter": "event_type = 'cart.add'",
+          "window_days": 30
+        }
+      ]
+    },
+    {
+      "group_id": "page_engagement",
+      "name": "Page Engagement Features",
+      "description": "Features derived from browsing behavior",
+      "features": [
+        {
+          "name": "page_views_7d",
+          "type": "int",
+          "description": "Total page views in last 7 days",
+          "aggregation": "count",
+          "source_table": "page_events",
+          "window_days": 7
+        },
+        {
+          "name": "page_views_30d",
+          "type": "int",
+          "description": "Total page views in last 30 days",
+          "aggregation": "count",
+          "source_table": "page_events",
+          "window_days": 30
+        },
+        {
+          "name": "sessions_7d",
+          "type": "int",
+          "description": "Number of unique sessions in last 7 days",
+          "aggregation": "count_distinct",
+          "source_table": "page_events",
+          "field": "session_id",
+          "window_days": 7
+        },
+        {
+          "name": "sessions_30d",
+          "type": "int",
+          "description": "Number of unique sessions in last 30 days",
+          "aggregation": "count_distinct",
+          "source_table": "page_events",
+          "field": "session_id",
+          "window_days": 30
+        },
+        {
+          "name": "avg_session_duration_ms",
+          "type": "float",
+          "description": "Average time spent per session in milliseconds",
+          "aggregation": "avg",
+          "source_table": "page_events",
+          "field": "duration_ms",
+          "window_days": 30
+        },
+        {
+          "name": "product_views_30d",
+          "type": "int",
+          "description": "Number of product page views in last 30 days",
+          "aggregation": "count",
+          "source_table": "page_events",
+          "filter": "page_type = 'product'",
+          "window_days": 30
+        },
+        {
+          "name": "unique_products_viewed_30d",
+          "type": "int",
+          "description": "Number of unique products viewed in last 30 days",
+          "aggregation": "count_distinct",
+          "source_table": "page_events",
+          "field": "product_id",
+          "filter": "page_type = 'product' AND product_id != ''",
+          "window_days": 30
+        },
+        {
+          "name": "checkout_page_views_30d",
+          "type": "int",
+          "description": "Number of checkout page views in last 30 days",
+          "aggregation": "count",
+          "source_table": "page_events",
+          "filter": "page_type = 'checkout'",
+          "window_days": 30
+        }
+      ]
+    },
+    {
+      "group_id": "purchase_history",
+      "name": "Purchase History Features",
+      "description": "Features derived from order/purchase data",
+      "features": [
+        {
+          "name": "orders_30d",
+          "type": "int",
+          "description": "Number of orders in last 30 days",
+          "aggregation": "count",
+          "source_table": "order_events",
+          "filter": "event_type = 'order.created'",
+          "window_days": 30
+        },
+        {
+          "name": "orders_90d",
+          "type": "int",
+          "description": "Number of orders in last 90 days",
+          "aggregation": "count",
+          "source_table": "order_events",
+          "filter": "event_type = 'order.created'",
+          "window_days": 90
+        },
+        {
+          "name": "total_revenue_30d",
+          "type": "float",
+          "description": "Total revenue in last 30 days",
+          "aggregation": "sum",
+          "source_table": "order_events",
+          "field": "total_amount",
+          "filter": "event_type = 'order.created'",
+          "window_days": 30
+        },
+        {
+          "name": "total_revenue_90d",
+          "type": "float",
+          "description": "Total revenue in last 90 days",
+          "aggregation": "sum",
+          "source_table": "order_events",
+          "field": "total_amount",
+          "filter": "event_type = 'order.created'",
+          "window_days": 90
+        },
+        {
+          "name": "avg_order_value",
+          "type": "float",
+          "description": "Average order value (all time)",
+          "aggregation": "avg",
+          "source_table": "order_events",
+          "field": "total_amount",
+          "filter": "event_type = 'order.created'",
+          "window_days": 365
+        },
+        {
+          "name": "total_items_purchased_30d",
+          "type": "int",
+          "description": "Total items purchased in last 30 days",
+          "aggregation": "sum",
+          "source_table": "order_events",
+          "field": "item_count",
+          "filter": "event_type = 'order.created'",
+          "window_days": 30
+        }
+      ]
+    },
+    {
+      "group_id": "recency",
+      "name": "Recency Features",
+      "description": "Time-based recency features",
+      "features": [
+        {
+          "name": "days_since_last_visit",
+          "type": "int",
+          "description": "Days since last page view",
+          "aggregation": "days_since_last",
+          "source_table": "page_events",
+          "window_days": 365
+        },
+        {
+          "name": "days_since_last_cart_add",
+          "type": "int",
+          "description": "Days since last cart add",
+          "aggregation": "days_since_last",
+          "source_table": "cart_events",
+          "filter": "event_type = 'cart.add'",
+          "window_days": 365
+        },
+        {
+          "name": "days_since_last_order",
+          "type": "int",
+          "description": "Days since last order",
+          "aggregation": "days_since_last",
+          "source_table": "order_events",
+          "filter": "event_type = 'order.created'",
+          "window_days": 365
+        }
+      ]
+    },
+    {
+      "group_id": "trends",
+      "name": "Trend Features",
+      "description": "Week-over-week and trend features",
+      "features": [
+        {
+          "name": "page_views_trend",
+          "type": "float",
+          "description": "Ratio of page views this week vs last week (>1 = increasing)",
+          "aggregation": "computed",
+          "formula": "page_views_7d / NULLIF(page_views_7d_prev, 0)",
+          "window_days": 14
+        },
+        {
+          "name": "cart_activity_trend",
+          "type": "float",
+          "description": "Ratio of cart adds this week vs last week",
+          "aggregation": "computed",
+          "formula": "cart_adds_7d / NULLIF(cart_adds_7d_prev, 0)",
+          "window_days": 14
+        },
+        {
+          "name": "is_declining_engagement",
+          "type": "bool",
+          "description": "True if page views decreased >50% week over week",
+          "aggregation": "computed",
+          "formula": "page_views_trend < 0.5",
+          "window_days": 14
+        }
+      ]
+    },
+    {
+      "group_id": "derived",
+      "name": "Derived/Computed Features",
+      "description": "Features computed from other features",
+      "features": [
+        {
+          "name": "purchase_frequency",
+          "type": "float",
+          "description": "Orders per 30 days (normalized)",
+          "aggregation": "computed",
+          "formula": "orders_30d"
+        },
+        {
+          "name": "browse_to_cart_ratio",
+          "type": "float",
+          "description": "Ratio of products carted to products viewed",
+          "aggregation": "computed",
+          "formula": "unique_products_carted_30d / NULLIF(unique_products_viewed_30d, 0)"
+        },
+        {
+          "name": "cart_to_purchase_ratio",
+          "type": "float",
+          "description": "Ratio of orders to cart adds (conversion rate)",
+          "aggregation": "computed",
+          "formula": "orders_30d / NULLIF(cart_adds_30d, 0)"
+        },
+        {
+          "name": "engagement_score",
+          "type": "float",
+          "description": "Composite engagement score (0-100)",
+          "aggregation": "computed",
+          "formula": "LEAST(100, (page_views_30d * 0.3 + sessions_30d * 2 + cart_adds_30d * 5 + orders_30d * 20))"
+        },
+        {
+          "name": "churn_risk_score",
+          "type": "float",
+          "description": "Computed churn risk (0-1, higher = more likely to churn)",
+          "aggregation": "model",
+          "model_id": "churn_predictor_v1"
+        }
+      ]
+    }
+  ],
+  "feature_store_config": {
+    "storage": "aerospike",
+    "namespace": "features",
+    "set_prefix": "user_features",
+    "ttl_days": 7,
+    "refresh_interval_hours": 1
+  }
+}
+

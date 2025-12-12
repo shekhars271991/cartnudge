@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime
-from typing import Any
+from typing import Any, List, Optional
 
 import clickhouse_connect
 from clickhouse_connect.driver.client import Client

@@ -192,6 +192,119 @@ class AerospikeService:
                 result[event_type] = data["data"]
         
         return result
+    
+    # =========================================================================
+    # Feature Store Methods
+    # =========================================================================
+    
+    def _build_feature_key(self, project_id: str, user_id: str) -> tuple:
+        """
+        Build an Aerospike key for user features.
+        
+        Key format: (namespace, set, pk)
+        - namespace: from settings
+        - set: {project_id}_features
+        - pk: user_id
+        """
+        set_name = f"{project_id}_features"
+        return (settings.aerospike_namespace, set_name, user_id)
+    
+    def put_user_features(
+        self,
+        project_id: str,
+        user_id: str,
+        features: dict[str, Any],
+        ttl: int = 0,
+    ) -> bool:
+        """
+        Store computed features for a user.
+        
+        Args:
+            project_id: Project identifier
+            user_id: User identifier
+            features: Dictionary of computed features
+            ttl: Time-to-live in seconds (0 = default)
+            
+        Returns:
+            True if successful
+        """
+        key = self._build_feature_key(project_id, user_id)
+        
+        # Store features as JSON string
+        bins = {
+            "features": json.dumps(features),
+            "user_id": user_id,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        
+        meta = {"ttl": ttl} if ttl > 0 else {}
+        
+        policy = {
+            "key": aerospike.POLICY_KEY_SEND,
+        }
+        
+        try:
+            self.client.put(key, bins, meta, policy)
+            return True
+        except aerospike_exceptions.AerospikeError as e:
+            print(f"Aerospike put_user_features error: {e}")
+            return False
+    
+    def get_user_features(
+        self,
+        project_id: str,
+        user_id: str,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Retrieve computed features for a user.
+        
+        Args:
+            project_id: Project identifier
+            user_id: User identifier
+            
+        Returns:
+            Feature dictionary or None if not found
+        """
+        key = self._build_feature_key(project_id, user_id)
+        
+        try:
+            _, _, bins = self.client.get(key)
+            if bins and "features" in bins:
+                features = json.loads(bins["features"])
+                features["_updated_at"] = bins.get("updated_at")
+                return features
+            return None
+        except aerospike_exceptions.RecordNotFound:
+            return None
+        except aerospike_exceptions.AerospikeError as e:
+            print(f"Aerospike get_user_features error: {e}")
+            return None
+    
+    def delete_user_features(
+        self,
+        project_id: str,
+        user_id: str,
+    ) -> bool:
+        """
+        Delete features for a user.
+        
+        Args:
+            project_id: Project identifier
+            user_id: User identifier
+            
+        Returns:
+            True if deleted
+        """
+        key = self._build_feature_key(project_id, user_id)
+        
+        try:
+            self.client.remove(key)
+            return True
+        except aerospike_exceptions.RecordNotFound:
+            return False
+        except aerospike_exceptions.AerospikeError as e:
+            print(f"Aerospike delete_user_features error: {e}")
+            return False
 
 
 # Global instance

@@ -1,7 +1,12 @@
 # Business logic services
 
 from app.services.pipeline_service import PipelineService
-from app.services.feature_service import FeatureService
+from app.services.feature_service import (
+    FeatureComputationService,
+    FeatureStoreService,
+    get_feature_service,
+    get_feature_store,
+)
 from app.services.datablock_service import DatablockService
 from app.services.datablock_template_service import DatablockTemplateService
 from app.services.deployment_service import DeploymentService
@@ -10,7 +15,10 @@ from app.services.aerospike_service import AerospikeService, aerospike_service, 
 
 __all__ = [
     "PipelineService",
-    "FeatureService",
+    "FeatureComputationService",
+    "FeatureStoreService",
+    "get_feature_service",
+    "get_feature_store",
     "DatablockService",
     "DatablockTemplateService",
     "DeploymentService",
