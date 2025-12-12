@@ -92,8 +92,13 @@ class AerospikeService:
         
         meta = {"ttl": ttl} if ttl > 0 else {}
         
+        # Write policy: store the primary key with the record
+        policy = {
+            "key": aerospike.POLICY_KEY_SEND,  # Store the key in the record
+        }
+        
         try:
-            self.client.put(key, bins, meta)
+            self.client.put(key, bins, meta, policy)
             return True
         except aerospike_exceptions.AerospikeError as e:
             print(f"Aerospike put error: {e}")

@@ -72,7 +72,35 @@ services:
     restart: "no"
 
   # ==========================================================================
-  # Aerospike - Feature Store (Key-Value)
+  # ClickHouse - Event Store (Raw Events for Feature Engineering)
+  # ==========================================================================
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: dataplatform-clickhouse
+    ports:
+      - "8123:8123"   # HTTP interface
+      - "9000:9000"   # Native TCP interface
+    environment:
+      CLICKHOUSE_DB: events
+      CLICKHOUSE_USER: cartnudge
+      CLICKHOUSE_PASSWORD: cartnudge_dev
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - dataplatform_clickhouse_data:/var/lib/clickhouse
+      - ./data/clickhouse/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # ==========================================================================
+  # Aerospike - Feature Store (Aggregated Features for Real-time Inference)
+  # Note: Will be populated by aggregation pipeline from ClickHouse
   # ==========================================================================
   aerospike:
     image: aerospike/aerospike-server:7.0.0.0
@@ -90,27 +118,95 @@ services:
       retries: 5
 
   # ==========================================================================
-  # PersistData Consumer - Kafka to Aerospike
+  # Feature Materializer - Kafka to ClickHouse
+  # Consumes from all event topics and writes raw events to ClickHouse
   # ==========================================================================
-  persist-data-consumer:
+  feature-materializer:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: dataplatform-persist-consumer
-    command: ["python", "-m", "runtime.ingestion.persist_data_consumer"]
+    container_name: dataplatform-feature-materializer
+    command: ["python", "-m", "runtime.ingestion.feature_materializer"]
     depends_on:
       kafka:
         condition: service_healthy
-      aerospike:
+      clickhouse:
         condition: service_healthy
+    ports:
+      - "8012:8011"  # Health check endpoint (different port for prod)
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      AEROSPIKE_HOSTS: aerospike:3000
-      AEROSPIKE_NAMESPACE: features
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: cartnudge
+      CLICKHOUSE_PASSWORD: cartnudge_dev
+      CLICKHOUSE_DATABASE: events
+      HEALTH_CHECK_PORT: "8011"
+      PYTHONUNBUFFERED: "1"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
     profiles:
-      - consumers
+      - materializer
 
+  # ==========================================================================
+  # Feature Materializer - Development (always on, no profile needed)
+  # ==========================================================================
+  feature-materializer-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dataplatform-feature-materializer-dev
+    command: ["python", "-m", "runtime.ingestion.feature_materializer"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "8011:8011"  # Health check endpoint
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: cartnudge
+      CLICKHOUSE_PASSWORD: cartnudge_dev
+      CLICKHOUSE_DATABASE: events
+      HEALTH_CHECK_PORT: "8011"
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  # ==========================================================================
+  # Development Tools
+  # ==========================================================================
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.1
     container_name: dataplatform-kafka-ui
@@ -127,4 +223,5 @@ services:
 volumes:
   dataplatform_mongodb_data:
   dataplatform_kafka_data:
+  dataplatform_clickhouse_data:
   dataplatform_aerospike_data:

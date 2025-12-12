@@ -16,6 +16,9 @@ aiokafka==0.10.0
 # Aerospike
 aerospike==15.0.0
 
+# ClickHouse
+clickhouse-connect==0.7.19
+
 # Validation & Settings
 pydantic==2.6.1
 pydantic-settings==2.1.0
@@ -23,6 +26,7 @@ email-validator==2.1.0
 
 # HTTP Client
 httpx==0.26.0
+aiohttp==3.9.3  # For health check server in consumers
 
 # Authentication
 python-jose[cryptography]==3.3.0

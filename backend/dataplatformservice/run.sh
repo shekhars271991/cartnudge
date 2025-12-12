@@ -36,20 +36,24 @@ docker-compose --profile tools up -d
 echo -e "${YELLOW}Waiting for services to be ready...${NC}"
 sleep 5
 
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
 # Check if we should run consumers
 RUN_CONSUMERS=${RUN_CONSUMERS:-true}
 
 if [ "$RUN_CONSUMERS" = "true" ]; then
-    echo -e "${GREEN}Starting PersistData Consumer in background...${NC}"
+    echo -e "${GREEN}Starting Feature Materializer in background...${NC}"
     
     # Kill any existing consumer process
+    pkill -f "feature_materializer" 2>/dev/null
     pkill -f "persist_data_consumer" 2>/dev/null
     
-    # Start the consumer in background with output redirected to log file
-    nohup python -m runtime.ingestion.persist_data_consumer > logs/persist_data_consumer.log 2>&1 &
+    # Start the Feature Materializer in background with output redirected to log file
+    nohup python -m runtime.ingestion.feature_materializer > logs/feature_materializer.log 2>&1 &
     CONSUMER_PID=$!
-    echo -e "${GREEN}PersistData Consumer started (PID: $CONSUMER_PID)${NC}"
-    echo -e "${YELLOW}Logs: logs/persist_data_consumer.log${NC}"
+    echo -e "${GREEN}Feature Materializer started (PID: $CONSUMER_PID)${NC}"
+    echo -e "${YELLOW}Logs: logs/feature_materializer.log${NC}"
 fi
 
 echo ""

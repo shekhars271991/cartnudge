@@ -31,7 +31,14 @@ class Settings(BaseSettings):
     
     # Aerospike
     aerospike_hosts: str = "localhost:3010"
-    aerospike_namespace: str = "features"
+    aerospike_namespace: str = "test"  # Default Aerospike namespace
+    
+    # ClickHouse
+    clickhouse_host: str = "localhost"
+    clickhouse_port: int = 8123
+    clickhouse_user: str = "cartnudge"
+    clickhouse_password: str = "cartnudge_dev"
+    clickhouse_database: str = "events"
     
     # JWT Settings (must match Identity Service)
     jwt_secret_key: str = "your-super-secret-key-change-in-production"
