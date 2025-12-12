@@ -75,7 +75,7 @@ class TestRoleBasedAccess:
             },
         )
         assert create_response.status_code == 201
-        datablock_id = create_response.json()["id"]
+        datablock_id = create_response.json()["_id"]
         
         # Try to mark ready for deployment (should fail)
         response = await developer_client.post(
@@ -97,7 +97,7 @@ class TestRoleBasedAccess:
             },
         )
         assert create_response.status_code == 201
-        datablock_id = create_response.json()["id"]
+        datablock_id = create_response.json()["_id"]
         
         # Mark ready for deployment (should succeed)
         response = await client.post(

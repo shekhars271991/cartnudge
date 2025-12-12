@@ -3,6 +3,7 @@ Tests for deployment API endpoints.
 """
 import pytest
 from httpx import AsyncClient
+from bson import ObjectId
 
 
 # =============================================================================
@@ -46,7 +47,7 @@ class TestDeploymentBuckets:
             json={"name": "First Bucket"},
         )
         assert response1.status_code == 201
-        bucket1_id = response1.json()["id"]
+        bucket1_id = response1.json()["_id"]
         
         # Try to create another - should return the same bucket
         response2 = await authenticated_client.post(
@@ -54,7 +55,7 @@ class TestDeploymentBuckets:
             json={"name": "Second Bucket"},
         )
         assert response2.status_code == 201
-        bucket2_id = response2.json()["id"]
+        bucket2_id = response2.json()["_id"]
         
         assert bucket1_id == bucket2_id
 
@@ -83,14 +84,14 @@ class TestDeploymentBuckets:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         response = await authenticated_client.get(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets/active",
         )
         
         assert response.status_code == 200
-        assert response.json()["id"] == bucket_id
+        assert response.json()["_id"] == bucket_id
 
     @pytest.mark.asyncio
     async def test_get_bucket_by_id(self, authenticated_client: AsyncClient):
@@ -99,14 +100,14 @@ class TestDeploymentBuckets:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         response = await authenticated_client.get(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets/{bucket_id}",
         )
         
         assert response.status_code == 200
-        assert response.json()["id"] == bucket_id
+        assert response.json()["_id"] == bucket_id
 
     @pytest.mark.asyncio
     async def test_discard_bucket(self, authenticated_client: AsyncClient):
@@ -115,7 +116,7 @@ class TestDeploymentBuckets:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Discard it
         response = await authenticated_client.delete(
@@ -129,7 +130,7 @@ class TestDeploymentBuckets:
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets?status=active",
         )
         buckets = list_response.json()["items"]
-        assert not any(b["id"] == bucket_id for b in buckets)
+        assert not any(b["_id"] == bucket_id for b in buckets)
 
 
 # =============================================================================
@@ -146,7 +147,7 @@ class TestDeploymentItems:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Add an item
         response = await authenticated_client.post(
@@ -173,7 +174,7 @@ class TestDeploymentItems:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Add first item
         await authenticated_client.post(
@@ -215,7 +216,7 @@ class TestDeploymentItems:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Add an item
         item_response = await authenticated_client.post(
@@ -227,7 +228,7 @@ class TestDeploymentItems:
                 "change_type": "create",
             },
         )
-        item_id = item_response.json()["id"]
+        item_id = item_response.json()["_id"]
         
         # Remove the item
         response = await authenticated_client.delete(
@@ -241,7 +242,7 @@ class TestDeploymentItems:
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets/{bucket_id}",
         )
         items = bucket_response.json()["items"]
-        assert not any(i["id"] == item_id for i in items)
+        assert not any(i["_id"] == item_id for i in items)
 
 
 # =============================================================================
@@ -258,7 +259,7 @@ class TestConflictCheck:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Check for conflicts
         response = await authenticated_client.post(
@@ -285,7 +286,7 @@ class TestDeployment:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Try to deploy
         response = await authenticated_client.post(
@@ -304,7 +305,7 @@ class TestDeployment:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Add an item
         await authenticated_client.post(
@@ -333,7 +334,6 @@ class TestDeployment:
     async def test_successful_deployment(self, authenticated_client: AsyncClient, test_db):
         """Test successful deployment execution."""
         # First create a datablock in the database
-        from bson import ObjectId
         datablock_id = str(ObjectId())
         await test_db.datablocks.insert_one({
             "_id": ObjectId(datablock_id),
@@ -347,7 +347,7 @@ class TestDeployment:
         create_response = await authenticated_client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/deployment-buckets",
         )
-        bucket_id = create_response.json()["id"]
+        bucket_id = create_response.json()["_id"]
         
         # Add the datablock to bucket
         await authenticated_client.post(

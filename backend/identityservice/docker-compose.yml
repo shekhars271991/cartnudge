@@ -21,24 +21,5 @@ services:
       timeout: 5s
       retries: 5
 
-  # ==========================================================================
-  # Development Tools (Optional)
-  # ==========================================================================
-  mongo-express:
-    image: mongo-express:1.0.2
-    container_name: identity-mongo-express
-    depends_on:
-      - mongodb
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: cartnudge
-      ME_CONFIG_MONGODB_ADMINPASSWORD: cartnudge_dev
-      ME_CONFIG_MONGODB_URL: mongodb://cartnudge:cartnudge_dev@mongodb:27017/
-      ME_CONFIG_BASICAUTH: "false"
-    profiles:
-      - tools
 
-volumes:
-  mongodb_data:
 

@@ -17,17 +17,19 @@ async def test_list_templates(client: AsyncClient):
     
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    assert len(data) > 0
+    assert "items" in data
+    assert "total" in data
+    assert data["total"] > 0
     
     # Check that each template has required fields
-    for template in data:
+    for template in data["items"]:
         assert "template_id" in template
         assert "name" in template
         assert "display_name" in template
         assert "description" in template
         assert "source_type" in template
         assert "default_schema" in template
+        assert "status" in template
 
 
 @pytest.mark.asyncio
@@ -118,7 +120,7 @@ async def test_create_datablock_from_template(client: AsyncClient):
     assert data["source_type"] == "csv"
     assert data["status"] == "not_configured"
     assert data["project_id"] == "test-project"
-    assert data["is_predefined"] is True
+    assert data["from_template"] is True
 
 
 @pytest.mark.asyncio
@@ -326,6 +328,25 @@ async def test_mark_ready_not_found(client: AsyncClient):
     assert response.status_code == 404
 
 
+@pytest.mark.asyncio
+async def test_mark_pending_deletion(client: AsyncClient):
+    """Test marking a datablock for pending deletion."""
+    # Create a datablock
+    create_response = await client.post(
+        "/api/v1/projects/test-project/datablocks/from-template/cart_events"
+    )
+    datablock_id = create_response.json()["_id"]
+    
+    # Mark for deletion
+    response = await client.post(
+        f"/api/v1/projects/test-project/datablocks/{datablock_id}/mark-pending-deletion"
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "pending_deletion"
+
+
 # -----------------------------------------------------------------------------
 # Project Isolation Tests
 # -----------------------------------------------------------------------------
@@ -356,3 +377,37 @@ async def test_datablocks_isolated_by_project(client: AsyncClient):
     assert data_b["total"] == 1
     assert data_b["items"][0]["name"] == "products"
     assert data_b["items"][0]["display_name"] == "Products"
+
+
+# -----------------------------------------------------------------------------
+# Integration Details Tests
+# -----------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_integration_details(client: AsyncClient):
+    """Test getting integration details for a deployed datablock."""
+    # Create and deploy a datablock
+    create_response = await client.post(
+        "/api/v1/projects/test-project/datablocks/from-template/cart_events"
+    )
+    datablock_id = create_response.json()["_id"]
+    
+    # Mark as deployed
+    await client.post(
+        f"/api/v1/projects/test-project/datablocks/{datablock_id}/mark-deployed"
+    )
+    
+    # Get integration details
+    response = await client.get(
+        f"/api/v1/projects/test-project/datablocks/{datablock_id}/integration"
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["datablock_name"] == "cart_events"
+    assert "endpoint" in data
+    assert "method" in data
+    assert "headers" in data
+    assert "example_payload" in data
+    assert "example_curl" in data
+    assert data["example_payload"]["event_type"] == "cart_events"

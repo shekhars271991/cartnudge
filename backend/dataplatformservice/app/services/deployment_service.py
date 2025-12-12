@@ -605,7 +605,7 @@ class DeploymentService:
         
         if deployment_doc["items_failed"] > 0:
             if deployment_doc["items_succeeded"] > 0:
-                deployment_doc["status"] = DeploymentStatus.PARTIAL.value
+                deployment_doc["status"] = DeploymentStatus.PARTIAL_SUCCESS.value
             else:
                 deployment_doc["status"] = DeploymentStatus.FAILED.value
         
@@ -626,7 +626,7 @@ class DeploymentService:
         
         success = deployment_doc["status"] in [
             DeploymentStatus.SUCCESS.value,
-            DeploymentStatus.PARTIAL.value,
+            DeploymentStatus.PARTIAL_SUCCESS.value,
         ]
         
         return {

@@ -11,19 +11,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.schemas.datablock_template import (
     DatablockTemplateCreate,
     DatablockTemplateUpdate,
-    TemplateCategory,
     TemplateStatus,
 )
 
 
 class DatablockTemplateService:
-    """Service for managing datablock templates in MongoDB."""
+    """Service for managing datablock templates."""
     
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
@@ -35,16 +33,12 @@ class DatablockTemplateService:
     
     async def get_all(
         self,
-        category: Optional[TemplateCategory] = None,
         status: Optional[TemplateStatus] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[List[dict], int]:
         """Get all active templates."""
         query = {}
-        
-        if category:
-            query["category"] = category.value
         
         if status:
             query["status"] = status.value
@@ -63,21 +57,11 @@ class DatablockTemplateService:
         return templates, total
     
     async def get_by_id(self, template_id: str) -> Optional[dict]:
-        """Get a template by its template_id (not MongoDB _id)."""
+        """Get a template by its template_id (e.g., 'cart_events', 'users')."""
         template = await self.collection.find_one({"template_id": template_id})
         if template:
             template["_id"] = str(template["_id"])
         return template
-    
-    async def get_by_mongo_id(self, mongo_id: str) -> Optional[dict]:
-        """Get a template by its MongoDB _id."""
-        try:
-            template = await self.collection.find_one({"_id": ObjectId(mongo_id)})
-            if template:
-                template["_id"] = str(template["_id"])
-            return template
-        except Exception:
-            return None
     
     async def create(self, data: DatablockTemplateCreate) -> dict:
         """Create a new template."""
@@ -90,7 +74,6 @@ class DatablockTemplateService:
             "description": data.description,
             "icon": data.icon.value,
             "source_type": data.source_type.value,
-            "category": data.category.value,
             "status": TemplateStatus.ACTIVE.value,
             "default_schema": [field.model_dump() for field in data.default_schema],
             "event_topic": data.event_topic,
@@ -114,8 +97,6 @@ class DatablockTemplateService:
             update_data["icon"] = update_data["icon"].value
         if "source_type" in update_data and update_data["source_type"]:
             update_data["source_type"] = update_data["source_type"].value
-        if "category" in update_data and update_data["category"]:
-            update_data["category"] = update_data["category"].value
         if "status" in update_data and update_data["status"]:
             update_data["status"] = update_data["status"].value
         
@@ -196,7 +177,7 @@ class DatablockTemplateService:
             if existing:
                 continue
             
-            # Map old schema format to new format
+            # Map schema format
             default_schema = []
             for field in template_data.get("default_schema", []):
                 default_schema.append({
@@ -207,17 +188,6 @@ class DatablockTemplateService:
                     "is_primary_key": field.get("is_primary_key", False),
                 })
             
-            # Determine category based on template_id
-            category = TemplateCategory.CUSTOM.value
-            if "user" in template_data["template_id"]:
-                category = TemplateCategory.USER_DATA.value
-            elif "product" in template_data["template_id"]:
-                category = TemplateCategory.PRODUCT_DATA.value
-            elif "event" in template_data["template_id"] or "view" in template_data["template_id"]:
-                category = TemplateCategory.EVENT_DATA.value
-            elif "order" in template_data["template_id"] or "cart" in template_data["template_id"]:
-                category = TemplateCategory.TRANSACTION_DATA.value
-            
             template_doc = {
                 "template_id": template_data["template_id"],
                 "name": template_data["name"],
@@ -225,7 +195,6 @@ class DatablockTemplateService:
                 "description": template_data["description"],
                 "icon": template_data["icon"],
                 "source_type": template_data["source_type"],
-                "category": category,
                 "status": TemplateStatus.ACTIVE.value,
                 "default_schema": default_schema,
                 "event_topic": template_data.get("event_topic"),

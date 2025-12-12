@@ -31,8 +31,6 @@ export interface SchemaFieldCreate {
   is_primary_key: boolean;
 }
 
-// Template category
-export type TemplateCategory = "user_data" | "product_data" | "event_data" | "transaction_data" | "custom";
 export type TemplateStatus = "active" | "deprecated" | "draft";
 
 // Template returned from /datablocks/templates (now stored in MongoDB)
@@ -45,7 +43,6 @@ export interface DatablockTemplate {
   description: string;
   icon: IconType;
   source_type: DataSourceType;
-  category: TemplateCategory;
   status: TemplateStatus;
   default_schema: SchemaField[];
   event_topic?: string | null;

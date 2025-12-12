@@ -81,6 +81,7 @@ class DatablockBase(BaseModel):
 class DatablockCreate(DatablockBase):
     """Schema for creating a datablock."""
     schema_fields: List[SchemaFieldCreate] = []
+    kafka_topic: Optional[str] = Field(None, description="Kafka topic for this datablock's events")
     event_topic: Optional[str] = None
     api_endpoint: Optional[str] = None
 
@@ -92,6 +93,7 @@ class DatablockUpdate(BaseModel):
     icon: Optional[IconType] = None
     source_type: Optional[DataSourceType] = None
     schema_fields: Optional[List[SchemaFieldCreate]] = None
+    kafka_topic: Optional[str] = Field(None, description="Kafka topic for this datablock's events")
     event_topic: Optional[str] = None
     api_endpoint: Optional[str] = None
     status: Optional[DatablockStatus] = None
@@ -109,6 +111,7 @@ class DatablockResponse(DatablockBase):
     schema_fields: List[SchemaFieldResponse] = []
     record_count: int = 0
     last_sync: Optional[datetime] = None
+    kafka_topic: Optional[str] = Field(None, description="Kafka topic for this datablock's events")
     event_topic: Optional[str] = None
     api_endpoint: Optional[str] = None
     deployment_id: Optional[int] = Field(None, description="Deployment sequence number")

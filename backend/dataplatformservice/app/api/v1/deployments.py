@@ -331,6 +331,25 @@ async def list_deployments(
 
 
 @router.get(
+    "/projects/{project_id}/deployments/current",
+    response_model=dict,
+    summary="Get current deployment ID",
+    description="Get the current (latest) deployment ID for a project.",
+)
+async def get_current_deployment_id(
+    project_id: str,
+    user: RequireRead,
+    db: Database,
+):
+    """Get current deployment ID."""
+    service = DeploymentService(db)
+    
+    deployment_id = await service.get_current_deployment_id(project_id)
+    
+    return {"current_deployment_id": deployment_id}
+
+
+@router.get(
     "/projects/{project_id}/deployments/{deployment_id}",
     response_model=DeploymentResponse,
     summary="Get deployment details",
@@ -354,23 +373,4 @@ async def get_deployment(
         )
     
     return DeploymentResponse(**deployment)
-
-
-@router.get(
-    "/projects/{project_id}/deployments/current",
-    response_model=dict,
-    summary="Get current deployment ID",
-    description="Get the current (latest) deployment ID for a project.",
-)
-async def get_current_deployment_id(
-    project_id: str,
-    user: RequireRead,
-    db: Database,
-):
-    """Get current deployment ID."""
-    service = DeploymentService(db)
-    
-    deployment_id = await service.get_current_deployment_id(project_id)
-    
-    return {"current_deployment_id": deployment_id}
 

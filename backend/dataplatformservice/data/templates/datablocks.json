@@ -6,6 +6,7 @@
     "description": "Anonymous user profiles and behavioral attributes. No PII stored.",
     "icon": "users",
     "source_type": "hybrid",
+    "kafka_topic": "user_events",
     "event_topic": "user.updated",
     "default_schema": [
       {
@@ -59,6 +60,7 @@
     "description": "Product catalog with pricing and inventory. Typically bulk imported from your catalog system.",
     "icon": "package",
     "source_type": "csv",
+    "kafka_topic": null,
     "event_topic": null,
     "default_schema": [
       {
@@ -112,6 +114,7 @@
     "description": "Real-time cart activity including add, remove, and checkout events. Essential for purchase prediction.",
     "icon": "cart",
     "source_type": "event",
+    "kafka_topic": "cart_events",
     "event_topic": "cart.*",
     "default_schema": [
       {
@@ -179,6 +182,7 @@
     "description": "Browsing behavior and page interactions. Used for engagement scoring.",
     "icon": "cursor",
     "source_type": "event",
+    "kafka_topic": "page_events",
     "event_topic": "page.view",
     "default_schema": [
       {
@@ -239,6 +243,7 @@
     "description": "Completed purchase orders. Can be synced via events or bulk imported.",
     "icon": "credit-card",
     "source_type": "hybrid",
+    "kafka_topic": "order_events",
     "event_topic": "order.created",
     "default_schema": [
       {

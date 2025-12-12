@@ -28,7 +28,6 @@ from app.schemas.datablock import (
 from app.schemas.datablock_template import (
     DatablockTemplateResponse,
     DatablockTemplateListResponse,
-    TemplateCategory,
 )
 from app.schemas.deployment import (
     DeploymentItemCreate,
@@ -51,13 +50,12 @@ router = APIRouter()
 )
 async def list_templates(
     db: Database,
-    category: Optional[TemplateCategory] = Query(None, description="Filter by category"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
 ):
     """List all datablock templates."""
     service = DatablockTemplateService(db)
-    templates, total = await service.get_all(category=category, skip=skip, limit=limit)
+    templates, total = await service.get_all(skip=skip, limit=limit)
     
     return DatablockTemplateListResponse(
         items=[DatablockTemplateResponse.model_validate(t) for t in templates],

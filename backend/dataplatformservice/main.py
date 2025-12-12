@@ -16,6 +16,7 @@ from app.db.mongodb import connect_to_mongo, close_mongo_connection, get_databas
 from app.api.v1 import router as api_v1_router
 from app.services.datablock_template_service import DatablockTemplateService
 from app.services.kafka_producer import kafka_producer
+from app.services.kafka_admin import kafka_admin
 
 
 async def seed_templates():
@@ -32,6 +33,17 @@ async def seed_templates():
         print(f"⚠ Warning: Failed to seed templates: {e}")
 
 
+async def initialize_kafka_topics():
+    """Initialize Kafka topics from event_topics.json."""
+    try:
+        result = await kafka_admin.initialize_topics()
+        if result.get("skipped"):
+            print("✓ Kafka topics already initialized")
+    except Exception as e:
+        print(f"⚠ Warning: Failed to initialize Kafka topics: {e}")
+        print("  Topics will be auto-created when events are published (if auto-create is enabled)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
@@ -41,10 +53,14 @@ async def lifespan(app: FastAPI):
     # Seed templates automatically
     await seed_templates()
     
+    # Initialize Kafka topics from event_topics.json
+    await initialize_kafka_topics()
+    
     yield
     
     # Shutdown
     await kafka_producer.stop()
+    await kafka_admin.stop()
     await close_mongo_connection()
 
 

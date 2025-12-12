@@ -15,15 +15,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.datablock import DataSourceType, FieldType, IconType, SchemaFieldCreate
 
 
-class TemplateCategory(str, Enum):
-    """Categories for organizing templates."""
-    USER_DATA = "user_data"
-    PRODUCT_DATA = "product_data"
-    EVENT_DATA = "event_data"
-    TRANSACTION_DATA = "transaction_data"
-    CUSTOM = "custom"
-
-
 class TemplateStatus(str, Enum):
     """Template status."""
     ACTIVE = "active"
@@ -56,8 +47,8 @@ class DatablockTemplateCreate(BaseModel):
     description: str
     icon: IconType = IconType.DATABASE
     source_type: DataSourceType
-    category: TemplateCategory = TemplateCategory.CUSTOM
     default_schema: List[TemplateSchemaField] = []
+    kafka_topic: Optional[str] = Field(None, description="Kafka topic for events from datablocks using this template")
     event_topic: Optional[str] = None
     tags: List[str] = []
 
@@ -68,8 +59,8 @@ class DatablockTemplateUpdate(BaseModel):
     description: Optional[str] = None
     icon: Optional[IconType] = None
     source_type: Optional[DataSourceType] = None
-    category: Optional[TemplateCategory] = None
     default_schema: Optional[List[TemplateSchemaField]] = None
+    kafka_topic: Optional[str] = Field(None, description="Kafka topic for events from datablocks using this template")
     event_topic: Optional[str] = None
     tags: Optional[List[str]] = None
     status: Optional[TemplateStatus] = None
@@ -86,9 +77,9 @@ class DatablockTemplateResponse(BaseModel):
     description: str
     icon: IconType
     source_type: DataSourceType
-    category: TemplateCategory
     status: TemplateStatus
     default_schema: List[TemplateSchemaField]
+    kafka_topic: Optional[str] = Field(None, description="Kafka topic for events")
     event_topic: Optional[str] = None
     tags: List[str] = []
     usage_count: int = 0  # How many datablocks were created from this template

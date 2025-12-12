@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     mongodb_db_name: str = "dataplatform"
     
     # Kafka
-    kafka_bootstrap_servers: str = "localhost:9093"
+    kafka_bootstrap_servers: str = "localhost:9092"
     kafka_topic_events: str = "events"
     
     # Aerospike

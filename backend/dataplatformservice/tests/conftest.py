@@ -69,6 +69,13 @@ async def test_db(mongo_client: AsyncIOMotorClient):
     await db.features.delete_many({})
     await db.deployments.delete_many({})
     await db.datablocks.delete_many({})
+    await db.datablock_templates.delete_many({})
+    await db.deployment_buckets.delete_many({})
+    
+    # Seed templates for tests
+    from app.services.datablock_template_service import DatablockTemplateService
+    template_service = DatablockTemplateService(db)
+    await template_service.seed_from_json()
     
     yield db
     
@@ -77,6 +84,8 @@ async def test_db(mongo_client: AsyncIOMotorClient):
     await db.features.delete_many({})
     await db.deployments.delete_many({})
     await db.datablocks.delete_many({})
+    await db.datablock_templates.delete_many({})
+    await db.deployment_buckets.delete_many({})
 
 
 @pytest.fixture(scope="function")
@@ -102,6 +111,13 @@ async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
     
     # Clear all overrides
     app.dependency_overrides.clear()
+
+
+# Alias for backwards compatibility with some tests
+@pytest.fixture(scope="function")
+async def authenticated_client(client: AsyncClient) -> AsyncClient:
+    """Alias for client fixture - authenticated user with full permissions."""
+    return client
 
 
 # -----------------------------------------------------------------------------

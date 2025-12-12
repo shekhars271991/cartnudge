@@ -11,7 +11,7 @@ by the DatablockTemplateService.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from bson import ObjectId
@@ -82,7 +82,7 @@ class DatablockService:
     
     async def create(self, project_id: str, data: DatablockCreate) -> dict:
         """Create a new custom datablock."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Generate unique IDs for schema fields
         schema_fields = []
@@ -100,10 +100,12 @@ class DatablockService:
             "source_type": data.source_type.value,
             "status": DatablockStatus.NOT_CONFIGURED.value,
             "from_template": False,  # Custom datablock, not from template
+            "is_predefined": False,  # Legacy field for compatibility
             "template_id": None,
             "schema_fields": schema_fields,
             "record_count": 0,
             "last_sync": None,
+            "kafka_topic": data.kafka_topic,  # Custom datablocks use custom_events by default
             "event_topic": data.event_topic,
             "api_endpoint": data.api_endpoint,
             "created_at": now,
@@ -124,7 +126,7 @@ class DatablockService:
         if not template:
             return None
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Generate unique IDs for schema fields
         schema_fields = []
@@ -142,10 +144,12 @@ class DatablockService:
             "source_type": template["source_type"],
             "status": DatablockStatus.NOT_CONFIGURED.value,
             "from_template": True,  # Created from a template
+            "is_predefined": True,  # Legacy field for compatibility - used for topic routing
             "template_id": template_id,
             "schema_fields": schema_fields,
             "record_count": 0,
             "last_sync": None,
+            "kafka_topic": template.get("kafka_topic"),  # Topic from template
             "event_topic": template.get("event_topic"),
             "api_endpoint": None,
             "created_at": now,
@@ -190,7 +194,7 @@ class DatablockService:
                 schema_fields.append(field_dict)
             update_data["schema_fields"] = schema_fields
         
-        update_data["updated_at"] = datetime.utcnow()
+        update_data["updated_at"] = datetime.now(timezone.utc)
         
         result = await self.collection.find_one_and_update(
             {"_id": ObjectId(datablock_id), "project_id": project_id},
@@ -220,7 +224,7 @@ class DatablockService:
             {
                 "$set": {
                     "status": DatablockStatus.READY_FOR_DEPLOYMENT.value,
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                 }
             },
             return_document=True,
@@ -236,7 +240,7 @@ class DatablockService:
             {
                 "$set": {
                     "status": DatablockStatus.DEPLOYED.value,
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                 }
             },
             return_document=True,

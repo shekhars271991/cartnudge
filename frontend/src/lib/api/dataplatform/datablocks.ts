@@ -10,7 +10,6 @@ import type {
   DatablockListResponse,
   DatablockTemplate,
   DatablockTemplateListResponse,
-  TemplateCategory,
   IntegrationDetails,
 } from "./types";
 
@@ -45,11 +44,9 @@ export const datablocksApi = {
   /**
    * List all datablock templates
    */
-  listTemplates: async (category?: TemplateCategory): Promise<DatablockTemplate[]> => {
-    const params = category ? { category } : {};
+  listTemplates: async (): Promise<DatablockTemplate[]> => {
     const response = await dataPlatformClient.get<DatablockTemplateListResponse>(
-      "/datablocks/templates",
-      { params }
+      "/datablocks/templates"
     );
     return response.data.items.map(normalizeTemplate);
   },

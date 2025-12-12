@@ -1,0 +1,74 @@
+{
+  "description": "Central configuration for all Kafka event topics. Datablock templates map to these topics.",
+  "version": "1.0",
+  "topics": [
+    {
+      "topic_id": "user_events",
+      "name": "user_events",
+      "display_name": "User Events",
+      "description": "User profile updates and lifecycle events",
+      "partitions": 3,
+      "replication_factor": 1,
+      "retention_ms": 604800000,
+      "event_patterns": ["user.*"],
+      "mapped_templates": ["users"]
+    },
+    {
+      "topic_id": "cart_events",
+      "name": "cart_events",
+      "display_name": "Cart Events",
+      "description": "Shopping cart activity - add, remove, checkout events",
+      "partitions": 6,
+      "replication_factor": 1,
+      "retention_ms": 604800000,
+      "event_patterns": ["cart.*"],
+      "mapped_templates": ["cart_events"]
+    },
+    {
+      "topic_id": "page_events",
+      "name": "page_events",
+      "display_name": "Page Events",
+      "description": "Page views, clicks, and browsing behavior",
+      "partitions": 6,
+      "replication_factor": 1,
+      "retention_ms": 604800000,
+      "event_patterns": ["page.*"],
+      "mapped_templates": ["page_views"]
+    },
+    {
+      "topic_id": "order_events",
+      "name": "order_events",
+      "display_name": "Order Events",
+      "description": "Order creation, updates, and fulfillment events",
+      "partitions": 3,
+      "replication_factor": 1,
+      "retention_ms": 604800000,
+      "event_patterns": ["order.*"],
+      "mapped_templates": ["orders"]
+    },
+    {
+      "topic_id": "custom_events",
+      "name": "custom_events",
+      "display_name": "Custom Events",
+      "description": "Custom datablock events that don't map to predefined topics",
+      "partitions": 3,
+      "replication_factor": 1,
+      "retention_ms": 604800000,
+      "event_patterns": ["custom.*"],
+      "mapped_templates": []
+    },
+    {
+      "topic_id": "dlq_events",
+      "name": "dlq_events",
+      "display_name": "Dead Letter Queue",
+      "description": "Failed events for retry or manual inspection",
+      "partitions": 1,
+      "replication_factor": 1,
+      "retention_ms": 2592000000,
+      "event_patterns": [],
+      "mapped_templates": []
+    }
+  ],
+  "default_topic": "custom_events"
+}
+

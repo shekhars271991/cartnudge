@@ -29,7 +29,6 @@ from app.schemas.datablock_template import (
     DatablockTemplateUpdate,
     DatablockTemplateResponse,
     DatablockTemplateListResponse,
-    TemplateCategory,
     TemplateStatus,
     TemplateSchemaField,
 )
@@ -78,7 +77,6 @@ __all__ = [
     "DatablockTemplateUpdate",
     "DatablockTemplateResponse",
     "DatablockTemplateListResponse",
-    "TemplateCategory",
     "TemplateStatus",
     "TemplateSchemaField",
     # Deployment
