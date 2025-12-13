@@ -4,12 +4,13 @@ Integration tests for the complete event ingestion flow.
 Tests the full pipeline:
 1. Customer calls event ingestion API
 2. API publishes event to Kafka
-3. Consumer reads from Kafka
-4. Consumer writes to Aerospike
+3. Feature Materializer reads from Kafka and writes to ClickHouse
+4. Feature Aggregator computes features and stores in Aerospike
 
 Requires running services for end-to-end tests:
 - MongoDB
 - Kafka
+- ClickHouse
 - Aerospike
 """
 
@@ -65,153 +66,6 @@ def sample_page_view_event():
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     }
-
-
-# =============================================================================
-# Unit Tests - Consumer Processing
-# =============================================================================
-
-class TestPersistDataConsumer:
-    """Tests for the PersistData consumer."""
-
-    @pytest.mark.asyncio
-    async def test_message_processing(self, sample_cart_event):
-        """Test that consumer correctly processes messages."""
-        from runtime.ingestion.persist_data_consumer import PersistDataConsumer
-        
-        with patch("runtime.ingestion.persist_data_consumer.get_aerospike_service") as mock_get_aerospike:
-            mock_aerospike_instance = MagicMock()
-            mock_aerospike_instance.put_event_data = MagicMock(return_value=True)
-            mock_get_aerospike.return_value = mock_aerospike_instance
-            
-            consumer = PersistDataConsumer()
-            consumer.aerospike = mock_aerospike_instance
-            
-            # Create a mock Kafka message
-            mock_message = MagicMock()
-            mock_message.value = {
-                "event_id": "evt_123",
-                "event_type": "cart_events",
-                "user_id": TEST_USER_ID,
-                "project_id": TEST_PROJECT_ID,
-                "data": sample_cart_event["data"],
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            
-            # Process the message
-            result = await consumer.process_message(mock_message)
-            
-            # Verify success
-            assert result is True
-            
-            # Verify Aerospike was called with correct parameters
-            mock_aerospike_instance.put_event_data.assert_called_once()
-            call_kwargs = mock_aerospike_instance.put_event_data.call_args[1]
-            assert call_kwargs["project_id"] == TEST_PROJECT_ID
-            assert call_kwargs["user_id"] == TEST_USER_ID
-            assert call_kwargs["event_type"] == "cart_events"
-
-    @pytest.mark.asyncio
-    async def test_batch_message_processing(self):
-        """Test processing multiple events in batch."""
-        from runtime.ingestion.persist_data_consumer import PersistDataConsumer
-        
-        with patch("runtime.ingestion.persist_data_consumer.get_aerospike_service") as mock_get_aerospike:
-            mock_aerospike_instance = MagicMock()
-            mock_aerospike_instance.put_event_data = MagicMock(return_value=True)
-            mock_get_aerospike.return_value = mock_aerospike_instance
-            
-            consumer = PersistDataConsumer()
-            consumer.aerospike = mock_aerospike_instance
-            
-            # Create multiple mock messages
-            messages = []
-            for i in range(5):
-                mock_message = MagicMock()
-                mock_message.value = {
-                    "event_id": f"evt_{i}",
-                    "event_type": "cart_events",
-                    "user_id": f"user_{i}",
-                    "project_id": TEST_PROJECT_ID,
-                    "data": {"user_id": f"user_{i}", "product_id": f"prod_{i}"},
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                }
-                messages.append(mock_message)
-            
-            # Process each message
-            for msg in messages:
-                await consumer.process_message(msg)
-            
-            # Verify all events were written
-            assert mock_aerospike_instance.put_event_data.call_count == 5
-
-    @pytest.mark.asyncio
-    async def test_invalid_message_handling(self):
-        """Test handling of invalid messages (missing required fields)."""
-        from runtime.ingestion.persist_data_consumer import PersistDataConsumer
-        
-        with patch("runtime.ingestion.persist_data_consumer.get_aerospike_service") as mock_get_aerospike:
-            mock_aerospike_instance = MagicMock()
-            mock_get_aerospike.return_value = mock_aerospike_instance
-            
-            consumer = PersistDataConsumer()
-            consumer.aerospike = mock_aerospike_instance
-            
-            # Create an invalid message (missing user_id)
-            mock_message = MagicMock()
-            mock_message.value = {
-                "event_id": "evt_invalid",
-                "event_type": "cart_events",
-                # Missing user_id and project_id
-                "data": {"product_id": "prod_1"},
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            
-            # Process the message
-            result = await consumer.process_message(mock_message)
-            
-            # Should return False for invalid messages
-            assert result is False
-            
-            # Aerospike should not be called
-            mock_aerospike_instance.put_event_data.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_aerospike_key_format(self, sample_cart_event):
-        """Test that Aerospike key is formatted correctly as user_id:event_type."""
-        from runtime.ingestion.persist_data_consumer import PersistDataConsumer
-        
-        captured_args = {}
-        
-        with patch("runtime.ingestion.persist_data_consumer.get_aerospike_service") as mock_get_aerospike:
-            mock_aerospike_instance = MagicMock()
-            
-            def capture_put(**kwargs):
-                captured_args.update(kwargs)
-                return True
-            
-            mock_aerospike_instance.put_event_data = capture_put
-            mock_get_aerospike.return_value = mock_aerospike_instance
-            
-            consumer = PersistDataConsumer()
-            consumer.aerospike = mock_aerospike_instance
-            
-            mock_message = MagicMock()
-            mock_message.value = {
-                "event_id": "evt_key_test",
-                "event_type": "cart_events",
-                "user_id": "user_abc",
-                "project_id": "project_xyz",
-                "data": {"user_id": "user_abc", "product_id": "prod_1"},
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            
-            await consumer.process_message(mock_message)
-            
-            # Verify the key components
-            assert captured_args["user_id"] == "user_abc"
-            assert captured_args["event_type"] == "cart_events"
-            assert captured_args["project_id"] == "project_xyz"
 
 
 # =============================================================================
@@ -274,48 +128,6 @@ class TestEventApiFlow:
             assert published_event["project_id"] == TEST_PROJECT_ID
 
     @pytest.mark.asyncio
-    async def test_kafka_to_aerospike_flow(self, sample_cart_event):
-        """Test the flow from Kafka message to Aerospike storage."""
-        from runtime.ingestion.persist_data_consumer import PersistDataConsumer
-        
-        stored_data = {}
-        
-        with patch("runtime.ingestion.persist_data_consumer.get_aerospike_service") as mock_get_aerospike:
-            mock_aerospike_instance = MagicMock()
-            
-            def capture_put(project_id, user_id, event_type, data):
-                key = f"{project_id}/{user_id}:{event_type}"
-                stored_data[key] = data
-                return True
-            
-            mock_aerospike_instance.put_event_data = capture_put
-            mock_get_aerospike.return_value = mock_aerospike_instance
-            
-            consumer = PersistDataConsumer()
-            consumer.aerospike = mock_aerospike_instance
-            
-            # Create a mock Kafka message
-            mock_message = MagicMock()
-            mock_message.value = {
-                "event_id": "evt_kafka_123",
-                "event_type": "cart_events",
-                "user_id": TEST_USER_ID,
-                "project_id": TEST_PROJECT_ID,
-                "data": sample_cart_event["data"],
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            
-            # Process the message
-            result = await consumer.process_message(mock_message)
-            
-            # Verify success
-            assert result is True
-            
-            # Verify data was stored in Aerospike
-            expected_key = f"{TEST_PROJECT_ID}/{TEST_USER_ID}:cart_events"
-            assert expected_key in stored_data
-
-    @pytest.mark.asyncio
     async def test_complete_flow_with_multiple_events(self, client: AsyncClient):
         """Test complete flow with multiple events."""
         # Create and deploy datablocks
@@ -349,11 +161,29 @@ class TestEventApiFlow:
             events = [
                 {
                     "event_type": "cart_events",
-                    "data": {"user_id": "user_1", "product_id": "prod_1", "quantity": 1},
+                    "data": {
+                        "user_id": TEST_USER_ID,
+                        "session_id": TEST_SESSION_ID,
+                        "product_id": "prod_1",
+                        "quantity": 1,
+                    }
                 },
                 {
                     "event_type": "cart_events",
-                    "data": {"user_id": "user_2", "product_id": "prod_2", "quantity": 3},
+                    "data": {
+                        "user_id": TEST_USER_ID,
+                        "session_id": TEST_SESSION_ID,
+                        "product_id": "prod_2",
+                        "quantity": 2,
+                    }
+                },
+                {
+                    "event_type": "page_views",
+                    "data": {
+                        "user_id": TEST_USER_ID,
+                        "session_id": TEST_SESSION_ID,
+                        "page_url": "/checkout",
+                    }
                 },
             ]
             
@@ -366,12 +196,17 @@ class TestEventApiFlow:
                 assert response.status_code == 202
             
             # Verify all events were published
-            assert len(published_events) == 2
+            assert len(published_events) == 3
+            
+            # Verify event types
+            event_types = [e["event_type"] for e in published_events]
+            assert event_types.count("cart_events") == 2
+            assert event_types.count("page_views") == 1
 
     @pytest.mark.asyncio
-    async def test_batch_api_ingestion(self, client: AsyncClient):
-        """Test batch event ingestion via API."""
-        # Create and deploy cart_events datablock
+    async def test_batch_event_ingestion(self, client: AsyncClient):
+        """Test batch event ingestion."""
+        # Create and deploy datablock
         create_response = await client.post(
             f"/api/v1/projects/{TEST_PROJECT_ID}/datablocks/from-template/cart_events"
         )
@@ -435,84 +270,72 @@ class TestEndToEndEventFlow:
     """
 
     @pytest.mark.asyncio
-    async def test_real_kafka_publish_and_consume(self, client: AsyncClient, sample_cart_event):
-        """Test real Kafka publish and consume with actual infrastructure."""
-        from runtime.ingestion.persist_data_consumer import PersistDataConsumer
-        from app.services.kafka_producer import get_kafka_producer
-        
-        # Create and deploy a datablock
-        create_response = await client.post(
-            f"/api/v1/projects/{TEST_PROJECT_ID}/datablocks/from-template/cart_events"
-        )
-        datablock_id = create_response.json()["_id"]
-        await client.post(
-            f"/api/v1/projects/{TEST_PROJECT_ID}/datablocks/{datablock_id}/mark-deployed"
-        )
-        
-        # Publish event via API (uses real Kafka)
-        response = await client.post(
-            "/api/v1/events/ingest",
-            json=sample_cart_event,
-            headers={"X-API-Key": f"proj_{TEST_PROJECT_ID}_sk_live_secret"},
-        )
-        
-        assert response.status_code == 202
-        
-        # Start consumer to read the event
-        consumer = PersistDataConsumer(group_id="test-consumer-e2e")
-        await consumer.start()
-        
-        # Consume for a short time
-        events_received = []
-        timeout = 10  # seconds
-        start_time = asyncio.get_event_loop().time()
-        
-        async for message in consumer.consumer:
-            events_received.append(message.value)
-            if asyncio.get_event_loop().time() - start_time > timeout:
-                break
-            if len(events_received) >= 1:
-                break
-        
-        await consumer.stop()
-        
-        # Verify event was received
-        assert len(events_received) >= 1
-        received_event = events_received[0]
-        assert received_event["event_type"] == "cart_events"
-        assert received_event["user_id"] == TEST_USER_ID
-
-    @pytest.mark.asyncio
-    async def test_real_aerospike_storage(self):
-        """Test real Aerospike read/write operations."""
+    async def test_real_aerospike_feature_storage(self):
+        """Test real Aerospike feature storage operations."""
         from app.services.aerospike_service import get_aerospike_service
         
         aerospike = get_aerospike_service()
         
-        test_data = {
-            "user_id": "test_user_e2e",
-            "product_id": "prod_e2e_123",
-            "quantity": 5,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+        test_features = {
+            "views_30d": 100,
+            "sessions_30d": 25,
+            "engagement_score": 75.5,
         }
         
-        # Write data
-        success = aerospike.put_event_data(
+        # Write feature group
+        success = aerospike.put_feature_group(
             project_id=TEST_PROJECT_ID,
             user_id="test_user_e2e",
-            event_type="cart_events",
-            data=test_data,
+            feature_group="page",
+            features=test_features,
         )
         assert success is True
         
-        # Read data back
-        result = aerospike.get_event_data(
+        # Read feature group back
+        result = aerospike.get_feature_group(
             project_id=TEST_PROJECT_ID,
             user_id="test_user_e2e",
-            event_type="cart_events",
+            feature_group="page",
         )
         
         assert result is not None
-        assert result["product_id"] == "prod_e2e_123"
+        assert result["views_30d"] == 100
+        assert result["sessions_30d"] == 25
+        
+        aerospike.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_real_all_feature_groups(self):
+        """Test retrieving all feature groups for a user."""
+        from app.services.aerospike_service import get_aerospike_service
+        
+        aerospike = get_aerospike_service()
+        
+        # Store multiple feature groups
+        groups_data = {
+            "cart": {"adds_30d": 5, "removes_7d": 1},
+            "page": {"views_30d": 50, "sessions_30d": 10},
+            "order": {"count_30d": 2, "revenue_30d": 150.00},
+        }
+        
+        for group, features in groups_data.items():
+            aerospike.put_feature_group(
+                project_id=TEST_PROJECT_ID,
+                user_id="test_user_all_groups",
+                feature_group=group,
+                features=features,
+            )
+        
+        # Retrieve all groups
+        all_groups = aerospike.get_all_feature_groups(
+            project_id=TEST_PROJECT_ID,
+            user_id="test_user_all_groups",
+        )
+        
+        assert "cart" in all_groups
+        assert "page" in all_groups
+        assert "order" in all_groups
+        assert all_groups["cart"]["features"]["adds_30d"] == 5
+        assert all_groups["page"]["features"]["views_30d"] == 50
         
         aerospike.disconnect()

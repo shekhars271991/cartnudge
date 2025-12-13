@@ -47,7 +47,6 @@ if [ "$RUN_CONSUMERS" = "true" ]; then
     
     # Kill any existing consumer process
     pkill -f "feature_materializer" 2>/dev/null
-    pkill -f "persist_data_consumer" 2>/dev/null
     
     # Start the Feature Materializer in background with output redirected to log file
     nohup python -m runtime.ingestion.feature_materializer > logs/feature_materializer.log 2>&1 &
