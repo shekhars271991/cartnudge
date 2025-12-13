@@ -1,0 +1,105 @@
+# Test Harness Configuration
+# Configure load generation parameters for event ingestion testing
+
+# API Configuration
+api:
+  base_url: "http://localhost:8010"
+  api_key: "proj_693aaf4df7c091f934f75483_YOUR_SECRET_HERE"  # Replace with your actual API key
+  timeout_seconds: 30
+  retry_attempts: 3
+
+# User Configuration
+users:
+  total_count: 100                # Total number of unique users to simulate
+  user_id_prefix: "test_user_"    # Prefix for generated user IDs
+  session_duration_minutes: 30    # Average session duration
+  sessions_per_user: 3            # Average sessions per user during load test
+
+# Event Generation Configuration
+events:
+  # Overall settings
+  batch_size: 50                  # Events per batch request
+  events_per_second: 100          # Target events per second (throttling)
+  duration_minutes: 10            # How long to run the load test
+  
+  # Event type weights (probability distribution)
+  weights:
+    cart_add: 15
+    cart_remove: 5
+    cart_update: 5
+    cart_checkout: 3
+    page_view: 40
+    page_click: 15
+    page_search: 7
+    order_created: 3
+    order_updated: 2
+    order_fulfilled: 2
+    user_signup: 1
+    user_login: 2
+
+# Product Catalog (for realistic cart/order events)
+products:
+  count: 50                       # Number of products to simulate
+  price_range:
+    min: 9.99
+    max: 499.99
+  categories:
+    - "Electronics"
+    - "Clothing"
+    - "Home & Garden"
+    - "Sports"
+    - "Books"
+    - "Toys"
+
+# Page Configuration (for page events)
+pages:
+  types:
+    - name: "home"
+      path: "/"
+      weight: 20
+    - name: "category"
+      path: "/category/{category}"
+      weight: 25
+    - name: "product"
+      path: "/product/{product_id}"
+      weight: 35
+    - name: "cart"
+      path: "/cart"
+      weight: 10
+    - name: "checkout"
+      path: "/checkout"
+      weight: 5
+    - name: "search"
+      path: "/search?q={query}"
+      weight: 5
+
+# Output Configuration
+output:
+  log_level: "INFO"               # DEBUG, INFO, WARNING, ERROR
+  log_file: "load_test.log"
+  stats_interval_seconds: 10      # Print stats every N seconds
+  save_results: true
+  results_file: "results.json"
+
+# Scenarios (predefined load patterns)
+scenarios:
+  quick_test:
+    users: 10
+    duration_minutes: 1
+    events_per_second: 10
+  
+  medium_load:
+    users: 100
+    duration_minutes: 10
+    events_per_second: 100
+  
+  heavy_load:
+    users: 1000
+    duration_minutes: 30
+    events_per_second: 500
+  
+  stress_test:
+    users: 5000
+    duration_minutes: 60
+    events_per_second: 1000
+
