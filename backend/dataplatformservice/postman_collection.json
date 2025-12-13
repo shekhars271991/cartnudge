@@ -284,68 +284,234 @@
 		},
 		{
 			"name": "Feature Store",
-			"description": "Feature store APIs - retrieve and compute user features from Aerospike",
+			"description": "Feature store APIs - retrieve and compute user features from Aerospike.\n\n**Feature Groups:**\n- **cart**: Shopping cart behavior (adds, removes, checkout)\n- **page**: Page view and session data\n- **order**: Purchase history and revenue\n- **engagement**: Computed engagement scores\n- **recency**: Time-based recency features",
 			"item": [
 				{
-					"name": "Get Feature Definitions",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/api/v1/features/definitions",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "features", "definitions"]
+					"name": "Feature Groups",
+					"description": "APIs for retrieving features organized by groups. Each group is stored independently with its own TTL.",
+					"item": [
+						{
+							"name": "List Available Feature Groups",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/groups",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "groups"]
+								},
+								"description": "Get list of available feature groups with descriptions"
+							}
 						},
-						"description": "Get all feature definitions with descriptions and computation logic"
-					}
+						{
+							"name": "Get All Feature Groups for User",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/groups",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "groups"]
+								},
+								"description": "Get all feature groups (cart, page, order, engagement, recency) for a user. Each group is stored in its own Aerospike set with independent TTL."
+							}
+						},
+						{
+							"name": "Get Selected Feature Groups",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/groups?groups=cart,engagement",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "groups"],
+									"query": [
+										{"key": "groups", "value": "cart,engagement"}
+									]
+								},
+								"description": "Get only specific feature groups for a user (comma-separated)"
+							}
+						},
+						{
+							"name": "Get Cart Features",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/groups/cart",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "groups", "cart"]
+								},
+								"description": "Get cart features only: adds, removes, checkouts, cart values, unique products"
+							}
+						},
+						{
+							"name": "Get Page Features",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/groups/page",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "groups", "page"]
+								},
+								"description": "Get page features only: views, sessions, duration, product views"
+							}
+						},
+						{
+							"name": "Get Order Features",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/groups/order",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "groups", "order"]
+								},
+								"description": "Get order features only: order counts, revenue, AOV, items purchased"
+							}
+						},
+						{
+							"name": "Get Engagement Features",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/groups/engagement",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "groups", "engagement"]
+								},
+								"description": "Get engagement features only: engagement score, cart abandonment rate, conversion ratios"
+							}
+						},
+						{
+							"name": "Get Recency Features",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/groups/recency",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "groups", "recency"]
+								},
+								"description": "Get recency features only: days/hours since last activity, first/last seen"
+							}
+						},
+						{
+							"name": "Get Flattened Features (ML-Ready)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/flat",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "flat"]
+								},
+								"description": "Get all features flattened into a single dictionary with prefixed names (e.g., cart_adds_7d, page_views_30d). Ideal for ML model inference."
+							}
+						},
+						{
+							"name": "Get Flattened Features (Selected Groups)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/flat?groups=cart,page,engagement",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "flat"],
+									"query": [
+										{"key": "groups", "value": "cart,page,engagement"}
+									]
+								},
+								"description": "Get flattened features for only selected groups"
+							}
+						}
+					]
 				},
 				{
-					"name": "Get User Features",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "X-API-Key", "value": "{{api_key}}"}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/features/user/{{user_id}}",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "features", "user", "{{user_id}}"]
+					"name": "Legacy (Single Blob)",
+					"description": "Legacy APIs that return all features in a single response",
+					"item": [
+						{
+							"name": "Get Feature Definitions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/definitions",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "definitions"]
+								},
+								"description": "Get all feature definitions with descriptions and computation logic"
+							}
 						},
-						"description": "Get precomputed features for a user from Aerospike. Features are computed by the Feature Aggregator job every 5 seconds."
-					}
-				},
-				{
-					"name": "Get User Feature Summary",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "X-API-Key", "value": "{{api_key}}"}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/summary",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "features", "user", "{{user_id}}", "summary"]
+						{
+							"name": "Get User Features (Legacy)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}"]
+								},
+								"description": "Get precomputed features for a user (legacy single-blob format). Prefer using /groups endpoints."
+							}
 						},
-						"description": "Get a summarized view of key features for a user (engagement, cart behavior, purchase history, recency, trends)"
-					}
-				},
-				{
-					"name": "Compute User Features (On-Demand)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "X-API-Key", "value": "{{api_key}}"}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/compute?ttl_days=7",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "features", "user", "{{user_id}}", "compute"],
-							"query": [
-								{"key": "ttl_days", "value": "7"}
-							]
+						{
+							"name": "Get User Feature Summary",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/summary",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "summary"]
+								},
+								"description": "Get a summarized view of key features for a user (engagement, cart behavior, purchase history, recency)"
+							}
 						},
-						"description": "Compute features for a user on-demand. This queries ClickHouse and stores in Aerospike. Use sparingly - prefer background job for bulk computation."
-					}
+						{
+							"name": "Compute User Features (On-Demand)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "X-API-Key", "value": "{{api_key}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/features/user/{{user_id}}/compute?ttl_days=7",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "features", "user", "{{user_id}}", "compute"],
+									"query": [
+										{"key": "ttl_days", "value": "7"}
+									]
+								},
+								"description": "Compute features for a user on-demand. This queries ClickHouse and stores in Aerospike. Use sparingly - prefer background job for bulk computation."
+							}
+						}
+					]
 				}
 			]
 		},
@@ -953,10 +1119,10 @@
 		},
 		{
 			"name": "E2E Test Flow",
-			"description": "End-to-end test: API → Kafka → ClickHouse → Aerospike",
+			"description": "End-to-end test: API → Kafka → ClickHouse → Aerospike\n\nRun these in order, waiting 5-10 seconds between steps for processing.",
 			"item": [
 				{
-					"name": "1. Send Test Events",
+					"name": "1. Send Cart Event",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -972,17 +1138,37 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "events", "ingest"]
 						},
-						"description": "Step 1: Send a test event to API"
+						"description": "Step 1: Send a cart.add event to API"
 					}
 				},
 				{
-					"name": "2. Check ClickHouse",
+					"name": "2. Send Page View Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-API-Key", "value": "{{api_key}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"event_type\": \"page.view\",\n    \"topic\": \"page_events\",\n    \"data\": {\n        \"user_id\": \"e2e_test_user\",\n        \"session_id\": \"e2e_session\",\n        \"page_url\": \"/products/TEST-PROD-001\",\n        \"page_type\": \"product\",\n        \"product_id\": \"TEST-PROD-001\",\n        \"duration_ms\": 15000\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/ingest",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "ingest"]
+						},
+						"description": "Step 2: Send a page.view event"
+					}
+				},
+				{
+					"name": "3. Check ClickHouse",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "SELECT * FROM events.cart_events WHERE user_id = 'e2e_test_user' ORDER BY event_timestamp DESC LIMIT 5 FORMAT Pretty"
+							"raw": "SELECT event_type, event_timestamp, user_id FROM events.all_events WHERE user_id = 'e2e_test_user' ORDER BY event_timestamp DESC LIMIT 10 FORMAT Pretty"
 						},
 						"url": {
 							"raw": "{{clickhouse_url}}/?user=cartnudge&password=cartnudge_dev",
@@ -993,22 +1179,67 @@
 								{"key": "password", "value": "cartnudge_dev"}
 							]
 						},
-						"description": "Step 2: Verify event reached ClickHouse (wait 5s after step 1)"
+						"description": "Step 3: Verify events reached ClickHouse (wait 5s after step 2)"
 					}
 				},
 				{
-					"name": "3. Get Features from Aerospike",
+					"name": "4. Get All Feature Groups",
 					"request": {
 						"method": "GET",
 						"header": [
 							{"key": "X-API-Key", "value": "{{api_key}}"}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/features/user/e2e_test_user",
+							"raw": "{{base_url}}/api/v1/features/user/e2e_test_user/groups",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "features", "user", "e2e_test_user"]
+							"path": ["api", "v1", "features", "user", "e2e_test_user", "groups"]
 						},
-						"description": "Step 3: Get computed features from Aerospike (wait 10-15s after step 1 for aggregator)"
+						"description": "Step 4: Get all computed feature groups from Aerospike (wait 10-15s for aggregator)"
+					}
+				},
+				{
+					"name": "5. Get Cart Features Only",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-API-Key", "value": "{{api_key}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/features/user/e2e_test_user/groups/cart",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "features", "user", "e2e_test_user", "groups", "cart"]
+						},
+						"description": "Step 5: Get just the cart feature group"
+					}
+				},
+				{
+					"name": "6. Get Flattened Features (ML-Ready)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-API-Key", "value": "{{api_key}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/features/user/e2e_test_user/flat",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "features", "user", "e2e_test_user", "flat"]
+						},
+						"description": "Step 6: Get all features flattened into a single dict for ML inference"
+					}
+				},
+				{
+					"name": "7. Get Feature Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-API-Key", "value": "{{api_key}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/features/user/e2e_test_user/summary",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "features", "user", "e2e_test_user", "summary"]
+						},
+						"description": "Step 7: Get a human-readable feature summary"
 					}
 				}
 			]

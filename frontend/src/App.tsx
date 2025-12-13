@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import DataPipelines from "./pages/DataPipelines";
 import DataPipelineCreate from "./pages/DataPipelineCreate";
+import DataPipelineDetail from "./pages/DataPipelineDetail";
 import FeatureStore from "./pages/FeatureStore";
 import NewPipeline from "./pages/pipelines/NewPipeline";
 import PipelineDetails from "./pages/pipelines/PipelineDetails";
@@ -51,6 +52,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/data-pipelines" element={<DataPipelines />} />
               <Route path="/data-pipelines/new" element={<DataPipelineCreate />} />
+              <Route path="/data-pipelines/:id" element={<DataPipelineDetail />} />
               <Route path="/feature-store" element={<FeatureStore />} />
               <Route path="/pipelines/new" element={<NewPipeline />} />
               <Route path="/pipelines/:id" element={<PipelineDetails />} />
