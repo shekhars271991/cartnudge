@@ -35,7 +35,7 @@ export function Sidebar() {
     ];
 
     const aiLinks = [
-        { href: "/models", label: "Prediction Models", icon: BrainCircuit },
+        { href: "/prediction", label: "Prediction", icon: BrainCircuit },
         { href: "/llm-config", label: "LLM Configuration", icon: Sparkles },
         { href: "/workflows", label: "Nudge Workflows", icon: Workflow },
         { href: "/channels", label: "Output Channels", icon: Radio },

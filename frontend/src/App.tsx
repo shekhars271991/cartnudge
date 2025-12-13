@@ -20,6 +20,8 @@ import NewPipeline from "./pages/pipelines/NewPipeline";
 import PipelineDetails from "./pages/pipelines/PipelineDetails";
 import Deployments from "./pages/Deployments";
 import Models from "./pages/Models";
+import Prediction from "./pages/Prediction";
+import ModelCreate from "./pages/ModelCreate";
 import LLMConfig from "./pages/LLMConfig";
 import Workflows from "./pages/Workflows";
 import Channels from "./pages/Channels";
@@ -57,7 +59,9 @@ function App() {
               <Route path="/pipelines/new" element={<NewPipeline />} />
               <Route path="/pipelines/:id" element={<PipelineDetails />} />
               <Route path="/deployments" element={<Deployments />} />
-              <Route path="/models" element={<Models />} />
+              <Route path="/prediction" element={<Prediction />} />
+              <Route path="/prediction/models/new" element={<ModelCreate />} />
+              <Route path="/models" element={<Models />} /> {/* Legacy route */}
               <Route path="/llm-config" element={<LLMConfig />} />
               <Route path="/workflows" element={<Workflows />} />
               <Route path="/channels" element={<Channels />} />
