@@ -243,7 +243,69 @@ export interface PipelineListResponse {
 }
 
 // ============================================================================
-// Feature Types (for future use)
+// User Feature Types (for Feature Store)
+// ============================================================================
+
+export type FeatureGroupName = "cart" | "page" | "order" | "engagement" | "recency";
+
+export interface FeatureGroupData {
+  features: Record<string, unknown>;
+  updated_at?: string;
+}
+
+export interface FeatureGroupsResponse {
+  user_id: string;
+  project_id: string;
+  groups: Record<FeatureGroupName, FeatureGroupData>;
+  available_groups: FeatureGroupName[];
+}
+
+export interface SingleFeatureGroupResponse {
+  user_id: string;
+  project_id: string;
+  group: FeatureGroupName;
+  features: Record<string, unknown>;
+  updated_at?: string;
+}
+
+export interface FlattenedFeaturesResponse {
+  user_id: string;
+  project_id: string;
+  features: Record<string, unknown>;
+  updated_at?: string;
+}
+
+export interface FeatureSummary {
+  user_id: string;
+  engagement: {
+    views_30d: number;
+    sessions_30d: number;
+    engagement_score: number;
+  };
+  cart_behavior: {
+    adds_30d: number;
+    abandonment_rate: number;
+    unique_products: number;
+  };
+  purchase_history: {
+    orders_30d: number;
+    revenue_30d: number;
+    avg_order_value: number;
+  };
+  recency: {
+    days_since_last: number;
+    hours_since_last: number;
+  };
+  computed_at?: string;
+}
+
+export interface FeatureGroupsList {
+  groups: FeatureGroupName[];
+  description: Record<FeatureGroupName, string>;
+}
+
+// ============================================================================
+// Feature Types (Legacy - for future use)
 // ============================================================================
 
 export type AggregationType = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX" | "DISTINCT_COUNT" | "LAST";

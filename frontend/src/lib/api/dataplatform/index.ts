@@ -8,6 +8,7 @@ export { default as dataPlatformClient } from "./client";
 export { datablocksApi } from "./datablocks";
 export { deploymentsApi } from "./deployments";
 export { pipelinesApi } from "./pipelines";
+export { featuresApi } from "./features";
 
 // Export types
 export type {
@@ -38,7 +39,15 @@ export type {
   PipelineCreate,
   PipelineUpdate,
   PipelineListResponse,
-  // Feature types
+  // User Feature types (Feature Store)
+  FeatureGroupName,
+  FeatureGroupData,
+  FeatureGroupsResponse,
+  SingleFeatureGroupResponse,
+  FlattenedFeaturesResponse,
+  FeatureSummary,
+  FeatureGroupsList,
+  // Legacy Feature types
   AggregationType,
   Feature,
   FeatureCreate,

@@ -12,6 +12,10 @@ These endpoints allow:
 - Retrieving precomputed features for a user (all groups or specific groups)
 - Triggering on-demand feature computation
 - Getting feature definitions
+
+Two authentication methods are supported:
+1. API Key (X-API-Key header) - for external/programmatic access
+2. Bearer Token - for internal admin UI (logged-in users)
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ from pydantic import BaseModel
 
 from app.services.feature_service import get_feature_store, get_feature_service
 from app.services.aerospike_service import get_aerospike_service, FeatureGroup
+from app.core.auth import RequireRead
 
 router = APIRouter()
 
@@ -494,4 +499,202 @@ async def get_flattened_features(
         project_id=project_id,
         features=flattened,
         updated_at=updated_at,
+    )
+
+
+# ============================================================================
+# Internal Admin API (Bearer Token Authentication)
+# These endpoints are for the admin UI and use project_id from the path
+# ============================================================================
+
+@router.get(
+    "/projects/{project_id}/features/user/{user_id}/groups",
+    response_model=AllFeatureGroupsResponse,
+    summary="Get all feature groups for a user (Admin)",
+    description="""
+    Get all feature groups for a user.
+    
+    **Authentication**: Requires Bearer token (logged-in user with project access).
+    """,
+)
+async def admin_get_all_user_feature_groups(
+    project_id: str,
+    user_id: str,
+    user: RequireRead,
+    groups: Optional[str] = Query(None, description="Comma-separated list of groups to fetch (default: all)"),
+):
+    """Get all feature groups for a user (admin endpoint)."""
+    # Parse groups filter
+    group_list = None
+    if groups:
+        group_list = [g.strip() for g in groups.split(",")]
+        invalid_groups = [g for g in group_list if g not in VALID_GROUPS]
+        if invalid_groups:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid groups: {invalid_groups}. Valid groups: {VALID_GROUPS}",
+            )
+    
+    aerospike = get_aerospike_service()
+    all_groups = aerospike.get_all_feature_groups(project_id, user_id, group_list)
+    
+    if not all_groups:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No features found for user {user_id}. Features may not have been computed yet.",
+        )
+    
+    return AllFeatureGroupsResponse(
+        user_id=user_id,
+        project_id=project_id,
+        groups=all_groups,
+    )
+
+
+@router.get(
+    "/projects/{project_id}/features/user/{user_id}/groups/{group}",
+    response_model=FeatureGroupResponse,
+    summary="Get a specific feature group for a user (Admin)",
+    description="""
+    Get features for a specific group.
+    
+    **Authentication**: Requires Bearer token (logged-in user with project access).
+    """,
+)
+async def admin_get_user_feature_group(
+    project_id: str,
+    user_id: str,
+    group: str,
+    user: RequireRead,
+):
+    """Get a specific feature group for a user (admin endpoint)."""
+    if group not in VALID_GROUPS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid group '{group}'. Valid groups: {VALID_GROUPS}",
+        )
+    
+    aerospike = get_aerospike_service()
+    features = aerospike.get_feature_group(project_id, user_id, group)
+    
+    if features is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Feature group '{group}' not found for user {user_id}",
+        )
+    
+    updated_at = features.pop("_updated_at", None)
+    features.pop("_group", None)
+    
+    return FeatureGroupResponse(
+        user_id=user_id,
+        project_id=project_id,
+        group=group,
+        features=features,
+        updated_at=updated_at,
+    )
+
+
+@router.get(
+    "/projects/{project_id}/features/user/{user_id}/flat",
+    response_model=FlattenedFeaturesResponse,
+    summary="Get flattened features for a user (Admin)",
+    description="""
+    Get all feature groups merged into a single flat dictionary.
+    
+    **Authentication**: Requires Bearer token (logged-in user with project access).
+    """,
+)
+async def admin_get_flattened_features(
+    project_id: str,
+    user_id: str,
+    user: RequireRead,
+    groups: Optional[str] = Query(None, description="Comma-separated list of groups to include"),
+):
+    """Get all features flattened into one dictionary (admin endpoint)."""
+    # Parse groups filter
+    group_list = None
+    if groups:
+        group_list = [g.strip() for g in groups.split(",")]
+        invalid_groups = [g for g in group_list if g not in VALID_GROUPS]
+        if invalid_groups:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid groups: {invalid_groups}. Valid groups: {VALID_GROUPS}",
+            )
+    
+    aerospike = get_aerospike_service()
+    flattened = aerospike.get_flattened_features(project_id, user_id, group_list)
+    
+    if len(flattened) <= 2:  # Only user_id and project_id, no actual features
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No features found for user {user_id}",
+        )
+    
+    updated_at = flattened.pop("_updated_at", None)
+    
+    return FlattenedFeaturesResponse(
+        user_id=user_id,
+        project_id=project_id,
+        features=flattened,
+        updated_at=updated_at,
+    )
+
+
+@router.get(
+    "/projects/{project_id}/features/user/{user_id}/summary",
+    summary="Get feature summary for a user (Admin)",
+    description="""
+    Get a summarized view of key features for a user.
+    
+    **Authentication**: Requires Bearer token (logged-in user with project access).
+    """,
+)
+async def admin_get_user_feature_summary(
+    project_id: str,
+    user_id: str,
+    user: RequireRead,
+):
+    """Get a summary of key features for a user (admin endpoint)."""
+    # Try new grouped features first
+    aerospike = get_aerospike_service()
+    all_groups = aerospike.get_all_feature_groups(project_id, user_id)
+    
+    if all_groups:
+        # Build summary from grouped features
+        cart = all_groups.get("cart", {}).get("features", {})
+        page = all_groups.get("page", {}).get("features", {})
+        order = all_groups.get("order", {}).get("features", {})
+        engagement = all_groups.get("engagement", {}).get("features", {})
+        recency = all_groups.get("recency", {}).get("features", {})
+        
+        summary = {
+            "user_id": user_id,
+            "engagement": {
+                "views_30d": page.get("views_30d", 0),
+                "sessions_30d": page.get("sessions_30d", 0),
+                "engagement_score": engagement.get("engagement_score", 0),
+            },
+            "cart_behavior": {
+                "adds_30d": cart.get("adds_30d", 0),
+                "abandonment_rate": engagement.get("cart_abandonment_rate", 0),
+                "unique_products": cart.get("unique_products", 0),
+            },
+            "purchase_history": {
+                "orders_30d": order.get("count_30d", 0),
+                "revenue_30d": order.get("revenue_30d", 0),
+                "avg_order_value": order.get("avg_value", 0),
+            },
+            "recency": {
+                "days_since_last": recency.get("days_since_last", 999),
+                "hours_since_last": recency.get("hours_since_last", 9999),
+            },
+            "computed_at": recency.get("last_seen"),
+        }
+        return summary
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Features not found for user {user_id}",
     )
