@@ -124,6 +124,83 @@ export interface IntegrationDetails {
 }
 
 // ============================================================================
+// Event Topic Types
+// ============================================================================
+
+export interface EventTopic {
+  topic_id: string;
+  name: string;
+  display_name: string;
+  description: string;
+  partitions: number;
+  replication_factor: number;
+  retention_ms: number;
+  event_patterns: string[];
+  mapped_templates: string[];
+}
+
+export interface EventTopicsConfig {
+  description: string;
+  version: string;
+  topics: EventTopic[];
+  default_topic: string;
+}
+
+// Event field schema for pipeline configuration
+export interface EventField {
+  id?: string;
+  name: string;
+  type: "string" | "number" | "boolean" | "date" | "array" | "object";
+  required: boolean;
+  description?: string;
+}
+
+// Event type configuration with its own fields
+export interface EventTypeConfig {
+  event_type: string;  // e.g., "cart.add"
+  display_name: string;
+  description?: string;
+  fields: EventField[];
+}
+
+// Event pipeline (user-created pipeline instance)
+export interface EventPipeline {
+  id: string;
+  _id?: string;
+  project_id: string;
+  name: string;
+  display_name: string;
+  description?: string;
+  topic_id: string;  // Maps to EventTopic.topic_id
+  event_configs: EventTypeConfig[];  // Each event type has its own fields
+  is_active: boolean;
+  events_count: number;
+  last_event_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventPipelineCreate {
+  name: string;
+  display_name: string;
+  description?: string;
+  topic_id: string;
+  event_configs?: EventTypeConfig[];
+}
+
+export interface EventPipelineUpdate {
+  display_name?: string;
+  description?: string;
+  event_configs?: EventTypeConfig[];
+  is_active?: boolean;
+}
+
+export interface EventPipelineListResponse {
+  items: EventPipeline[];
+  total: number;
+}
+
+// ============================================================================
 // Pipeline Types (for future use)
 // ============================================================================
 

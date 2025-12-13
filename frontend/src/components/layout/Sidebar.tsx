@@ -30,7 +30,6 @@ export function Sidebar() {
     };
 
     const dataLinks = [
-        { href: "/data-modeling", label: "Data Modeling", icon: Database },
         { href: "/data-pipelines", label: "Data Pipelines", icon: Plug },
         { href: "/feature-store", label: "Feature Store", icon: Users },
     ];
