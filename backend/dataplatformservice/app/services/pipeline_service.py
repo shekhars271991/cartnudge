@@ -1,33 +1,33 @@
 """
-Pipeline service - business logic for pipeline management with MongoDB.
+Pipeline service - business logic for event pipeline management with MongoDB.
 """
 from __future__ import annotations
 
-import secrets
 from datetime import datetime
+from typing import List, Optional, Tuple, Dict, Any
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo import ReturnDocument
 
 from app.schemas.pipeline import (
     PipelineCreate,
     PipelineUpdate,
-    EventCreate,
-    EventUpdate,
-    PipelineStatus,
+    EventTypeConfigCreate,
+    EventTypeConfigUpdate,
 )
 
 
 class PipelineService:
-    """Service for managing pipelines in MongoDB."""
+    """Service for managing event pipelines in MongoDB."""
     
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
-        self.collection = db.pipelines
+        self.collection = db.event_pipelines  # Renamed collection for clarity
     
     async def get_all_for_project(
         self, project_id: str, skip: int = 0, limit: int = 100
-    ) -> tuple[list[dict], int]:
+    ) -> Tuple[List[Dict[str, Any]], int]:
         """Get all pipelines for a project."""
         query = {"project_id": project_id}
         
@@ -44,7 +44,7 @@ class PipelineService:
         
         return pipelines, total
     
-    async def get_by_id(self, pipeline_id: str, project_id: str) -> dict | None:
+    async def get_by_id(self, pipeline_id: str, project_id: str) -> Optional[Dict[str, Any]]:
         """Get a pipeline by ID."""
         try:
             pipeline = await self.collection.find_one({
@@ -57,26 +57,38 @@ class PipelineService:
         except Exception:
             return None
     
-    async def create(self, project_id: str, data: PipelineCreate) -> dict:
-        """Create a new pipeline."""
+    async def get_by_topic(self, topic_id: str, project_id: str) -> Optional[Dict[str, Any]]:
+        """Get a pipeline by topic ID for a project."""
+        pipeline = await self.collection.find_one({
+            "topic_id": topic_id,
+            "project_id": project_id,
+        })
+        if pipeline:
+            pipeline["_id"] = str(pipeline["_id"])
+        return pipeline
+    
+    async def create(self, project_id: str, data: PipelineCreate) -> Dict[str, Any]:
+        """Create a new event pipeline."""
         now = datetime.utcnow()
         
         pipeline_doc = {
             "project_id": project_id,
             "name": data.name,
+            "display_name": data.display_name,
             "description": data.description,
-            "category": data.category.value,
-            "status": PipelineStatus.CONFIGURING.value,
-            "webhook_secret": secrets.token_hex(32),
-            "events": [
+            "topic_id": data.topic_id,
+            "event_configs": [
                 {
-                    "name": event.name,
-                    "description": event.description,
-                    "enabled": event.enabled,
-                    "fields": [field.model_dump() for field in event.fields],
+                    "event_type": ec.event_type,
+                    "display_name": ec.display_name,
+                    "description": ec.description,
+                    "fields": [field.model_dump() for field in ec.fields],
                 }
-                for event in data.events
+                for ec in data.event_configs
             ],
+            "is_active": False,
+            "events_count": 0,
+            "last_event_at": None,
             "created_at": now,
             "updated_at": now,
         }
@@ -86,19 +98,30 @@ class PipelineService:
         
         return pipeline_doc
     
-    async def update(self, pipeline_id: str, project_id: str, data: PipelineUpdate) -> dict | None:
+    async def update(
+        self, pipeline_id: str, project_id: str, data: PipelineUpdate
+    ) -> Optional[Dict[str, Any]]:
         """Update a pipeline."""
         update_data = data.model_dump(exclude_unset=True)
         
-        if "status" in update_data and update_data["status"]:
-            update_data["status"] = update_data["status"].value
+        # Handle event_configs separately
+        if "event_configs" in update_data and update_data["event_configs"] is not None:
+            update_data["event_configs"] = [
+                {
+                    "event_type": ec["event_type"],
+                    "display_name": ec["display_name"],
+                    "description": ec.get("description"),
+                    "fields": ec.get("fields", []),
+                }
+                for ec in update_data["event_configs"]
+            ]
         
         update_data["updated_at"] = datetime.utcnow()
         
         result = await self.collection.find_one_and_update(
             {"_id": ObjectId(pipeline_id), "project_id": project_id},
             {"$set": update_data},
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
         
         if result:
@@ -114,68 +137,58 @@ class PipelineService:
         })
         return result.deleted_count > 0
     
-    async def activate(self, pipeline_id: str, project_id: str) -> dict | None:
-        """Activate a pipeline."""
+    async def set_active(
+        self, pipeline_id: str, project_id: str, is_active: bool
+    ) -> Optional[Dict[str, Any]]:
+        """Set pipeline active status."""
         result = await self.collection.find_one_and_update(
             {"_id": ObjectId(pipeline_id), "project_id": project_id},
-            {"$set": {"status": PipelineStatus.ACTIVE.value, "updated_at": datetime.utcnow()}},
-            return_document=True,
+            {"$set": {"is_active": is_active, "updated_at": datetime.utcnow()}},
+            return_document=ReturnDocument.AFTER,
         )
         if result:
             result["_id"] = str(result["_id"])
         return result
     
-    async def deactivate(self, pipeline_id: str, project_id: str) -> dict | None:
-        """Deactivate a pipeline."""
+    async def increment_events_count(
+        self, pipeline_id: str, project_id: str, count: int = 1
+    ) -> Optional[Dict[str, Any]]:
+        """Increment the events count for a pipeline."""
+        now = datetime.utcnow()
         result = await self.collection.find_one_and_update(
             {"_id": ObjectId(pipeline_id), "project_id": project_id},
-            {"$set": {"status": PipelineStatus.INACTIVE.value, "updated_at": datetime.utcnow()}},
-            return_document=True,
+            {
+                "$inc": {"events_count": count},
+                "$set": {"last_event_at": now, "updated_at": now},
+            },
+            return_document=ReturnDocument.AFTER,
         )
         if result:
             result["_id"] = str(result["_id"])
         return result
     
-    async def rotate_webhook_secret(self, pipeline_id: str, project_id: str) -> str | None:
-        """Generate a new webhook secret."""
-        new_secret = secrets.token_hex(32)
-        
-        result = await self.collection.find_one_and_update(
-            {"_id": ObjectId(pipeline_id), "project_id": project_id},
-            {"$set": {"webhook_secret": new_secret, "updated_at": datetime.utcnow()}},
-            return_document=True,
-        )
-        
-        return new_secret if result else None
-    
-    async def get_webhook_secret(self, pipeline_id: str, project_id: str) -> str | None:
-        """Get webhook secret for a pipeline."""
-        pipeline = await self.collection.find_one(
-            {"_id": ObjectId(pipeline_id), "project_id": project_id},
-            {"webhook_secret": 1},
-        )
-        return pipeline.get("webhook_secret") if pipeline else None
-    
     # -------------------------------------------------------------------------
-    # Event Operations (nested in pipeline document)
+    # Event Type Config Operations
     # -------------------------------------------------------------------------
     
-    async def add_event(self, pipeline_id: str, project_id: str, data: EventCreate) -> dict | None:
-        """Add an event to a pipeline."""
-        event_doc = {
-            "name": data.name,
+    async def add_event_config(
+        self, pipeline_id: str, project_id: str, data: EventTypeConfigCreate
+    ) -> Optional[Dict[str, Any]]:
+        """Add an event type configuration to a pipeline."""
+        event_config_doc = {
+            "event_type": data.event_type,
+            "display_name": data.display_name,
             "description": data.description,
-            "enabled": data.enabled,
             "fields": [field.model_dump() for field in data.fields],
         }
         
         result = await self.collection.find_one_and_update(
             {"_id": ObjectId(pipeline_id), "project_id": project_id},
             {
-                "$push": {"events": event_doc},
+                "$push": {"event_configs": event_config_doc},
                 "$set": {"updated_at": datetime.utcnow()},
             },
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
         
         if result:
@@ -183,18 +196,22 @@ class PipelineService:
         
         return result
     
-    async def update_event(
-        self, pipeline_id: str, project_id: str, event_name: str, data: EventUpdate
-    ) -> dict | None:
-        """Update an event in a pipeline."""
+    async def update_event_config(
+        self,
+        pipeline_id: str,
+        project_id: str,
+        event_type: str,
+        data: EventTypeConfigUpdate,
+    ) -> Optional[Dict[str, Any]]:
+        """Update an event type configuration in a pipeline."""
         update_fields = {}
         update_data = data.model_dump(exclude_unset=True)
         
         for key, value in update_data.items():
             if key == "fields" and value is not None:
-                update_fields[f"events.$.{key}"] = [f.model_dump() if hasattr(f, 'model_dump') else f for f in value]
+                update_fields[f"event_configs.$.{key}"] = value
             else:
-                update_fields[f"events.$.{key}"] = value
+                update_fields[f"event_configs.$.{key}"] = value
         
         update_fields["updated_at"] = datetime.utcnow()
         
@@ -202,10 +219,10 @@ class PipelineService:
             {
                 "_id": ObjectId(pipeline_id),
                 "project_id": project_id,
-                "events.name": event_name,
+                "event_configs.event_type": event_type,
             },
             {"$set": update_fields},
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
         
         if result:
@@ -213,18 +230,54 @@ class PipelineService:
         
         return result
     
-    async def delete_event(self, pipeline_id: str, project_id: str, event_name: str) -> dict | None:
-        """Delete an event from a pipeline."""
+    async def delete_event_config(
+        self, pipeline_id: str, project_id: str, event_type: str
+    ) -> Optional[Dict[str, Any]]:
+        """Delete an event type configuration from a pipeline."""
         result = await self.collection.find_one_and_update(
             {"_id": ObjectId(pipeline_id), "project_id": project_id},
             {
-                "$pull": {"events": {"name": event_name}},
+                "$pull": {"event_configs": {"event_type": event_type}},
                 "$set": {"updated_at": datetime.utcnow()},
             },
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
         
         if result:
             result["_id"] = str(result["_id"])
         
         return result
+    
+    # -------------------------------------------------------------------------
+    # Validation
+    # -------------------------------------------------------------------------
+    
+    async def validate_event_type(
+        self, pipeline_id: str, project_id: str, event_type: str
+    ) -> bool:
+        """Check if an event type is configured in a pipeline."""
+        pipeline = await self.collection.find_one(
+            {
+                "_id": ObjectId(pipeline_id),
+                "project_id": project_id,
+                "event_configs.event_type": event_type,
+            },
+            {"_id": 1},
+        )
+        return pipeline is not None
+    
+    async def get_event_config(
+        self, pipeline_id: str, project_id: str, event_type: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get a specific event type configuration from a pipeline."""
+        pipeline = await self.collection.find_one(
+            {
+                "_id": ObjectId(pipeline_id),
+                "project_id": project_id,
+            },
+            {"event_configs": {"$elemMatch": {"event_type": event_type}}},
+        )
+        
+        if pipeline and pipeline.get("event_configs"):
+            return pipeline["event_configs"][0]
+        return None

@@ -2,7 +2,7 @@
  * Data Platform Service API Client
  * 
  * Separate client for the data platform service (runs on different port)
- * Uses the same auth token from identity service
+ * Uses the same auth token from identity service (Bearer token)
  */
 
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
@@ -19,7 +19,7 @@ export const dataPlatformClient = axios.create({
   },
 });
 
-// Request interceptor - attach access token (same as identity service)
+// Request interceptor - attach Bearer access token
 dataPlatformClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenManager.getAccessToken();
@@ -49,4 +49,3 @@ dataPlatformClient.interceptors.response.use(
 );
 
 export default dataPlatformClient;
-

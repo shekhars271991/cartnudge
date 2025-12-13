@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useProject } from "@/contexts/ProjectContext";
 import { EmptyProjectState } from "@/components/EmptyProjectState";
+import { pipelinesApi } from "@/lib/api/dataplatform";
 import type { EventPipeline, EventTypeConfig } from "@/lib/api/dataplatform/types";
 import { Label } from "@/components/ui/label";
 
@@ -66,7 +67,7 @@ export default function DataPipelines() {
     const navigate = useNavigate();
     const { selectedProject } = useProject();
 
-    // Pipeline state (would come from API in production)
+    // Pipeline state
     const [pipelines, setPipelines] = useState<EventPipeline[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export default function DataPipelines() {
     const [selectedPipeline, setSelectedPipeline] = useState<EventPipeline | null>(null);
     const [showIntegration, setShowIntegration] = useState(false);
 
-    // Load pipelines
+    // Load pipelines from API
     const loadPipelines = useCallback(async () => {
         if (!selectedProject) return;
 
@@ -83,12 +84,12 @@ export default function DataPipelines() {
         setError(null);
 
         try {
-            // Simulated data - in production, this would be an API call
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            setPipelines([]);
-        } catch (err) {
+            const response = await pipelinesApi.list(selectedProject.id);
+            setPipelines(response.items);
+        } catch (err: unknown) {
             console.error("Failed to load pipelines:", err);
-            setError("Failed to load pipelines");
+            const errorMessage = err instanceof Error ? err.message : "Failed to load pipelines";
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -108,19 +109,37 @@ export default function DataPipelines() {
         );
     }
 
-    const togglePipelineActive = (pipelineId: string) => {
-        setPipelines((prev) =>
-            prev.map((p) => (p.id === pipelineId ? { ...p, is_active: !p.is_active } : p))
-        );
-        if (selectedPipeline?.id === pipelineId) {
-            setSelectedPipeline((prev) => (prev ? { ...prev, is_active: !prev.is_active } : null));
+    const togglePipelineActive = async (pipelineId: string) => {
+        const pipeline = pipelines.find((p) => p.id === pipelineId);
+        if (!pipeline) return;
+
+        try {
+            const updated = pipeline.is_active
+                ? await pipelinesApi.deactivate(selectedProject.id, pipelineId)
+                : await pipelinesApi.activate(selectedProject.id, pipelineId);
+            
+            setPipelines((prev) =>
+                prev.map((p) => (p.id === pipelineId ? updated : p))
+            );
+            if (selectedPipeline?.id === pipelineId) {
+                setSelectedPipeline(updated);
+            }
+        } catch (err) {
+            console.error("Failed to toggle pipeline status:", err);
+            alert("Failed to update pipeline status");
         }
     };
 
-    const deletePipeline = (pipelineId: string) => {
-        if (confirm("Are you sure you want to delete this pipeline?")) {
+    const deletePipeline = async (pipelineId: string) => {
+        if (!confirm("Are you sure you want to delete this pipeline?")) return;
+
+        try {
+            await pipelinesApi.delete(selectedProject.id, pipelineId);
             setPipelines((prev) => prev.filter((p) => p.id !== pipelineId));
             setSelectedPipeline(null);
+        } catch (err) {
+            console.error("Failed to delete pipeline:", err);
+            alert("Failed to delete pipeline");
         }
     };
 
@@ -412,6 +431,15 @@ export default function DataPipelines() {
                                                         <Copy className="h-4 w-4" />
                                                     </Button>
                                                 </div>
+                                                <div>
+                                                    <p className="text-xs text-violet-600 font-medium">AUTHENTICATION</p>
+                                                    <p className="text-sm text-violet-800 mt-1">
+                                                        Use an API key created in Settings → API Keys
+                                                    </p>
+                                                    <p className="text-xs text-violet-600 mt-1 font-mono">
+                                                        X-API-Key: proj_{selectedProject?.id}_{"<your_secret>"}
+                                                    </p>
+                                                </div>
                                             </div>
 
                                             <div>
@@ -422,9 +450,9 @@ export default function DataPipelines() {
                                                         variant="ghost"
                                                         onClick={() => {
                                                             const firstConfig = selectedPipeline.event_configs[0];
-                                                            const curl = `curl -X POST "http://localhost:8010/api/v1/events/ingest" \\
+                                                            const curl = `curl -X POST "https://api.cartnudge.ai/api/v1/events/ingest" \\
   -H "Content-Type: application/json" \\
-  -H "X-API-Key: proj_YOUR_PROJECT_KEY" \\
+  -H "X-API-Key: proj_${selectedProject?.id}_YOUR_SECRET" \\
   -d '{
     "event_type": "${firstConfig?.event_type || "event.type"}",
     "topic": "${selectedPipeline.topic_id}",
@@ -441,9 +469,9 @@ export default function DataPipelines() {
                                                 </div>
                                                 {selectedPipeline.event_configs[0] && (
                                                     <pre className="p-4 bg-slate-900 text-slate-100 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap">
-{`curl -X POST "http://localhost:8010/api/v1/events/ingest" \\
+{`curl -X POST "https://api.cartnudge.ai/api/v1/events/ingest" \\
   -H "Content-Type: application/json" \\
-  -H "X-API-Key: proj_YOUR_PROJECT_KEY" \\
+  -H "X-API-Key: proj_${selectedProject?.id}_YOUR_SECRET" \\
   -d '{
     "event_type": "${selectedPipeline.event_configs[0].event_type}",
     "topic": "${selectedPipeline.topic_id}",

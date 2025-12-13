@@ -274,3 +274,45 @@ RequireDeploy = Annotated[AuthenticatedUser, Depends(require_permission(Permissi
 # Type alias for authenticated user (no project context)
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_authenticated_user)]
 
+
+# -----------------------------------------------------------------------------
+# API Key Authentication (for data platform operations)
+# -----------------------------------------------------------------------------
+
+def parse_api_key(api_key: str) -> tuple:
+    """
+    Parse API key to extract project_id.
+    
+    API Key Format: proj_{project_id}_{secret}
+    Example: proj_abc123def456_sk_live_xxxxxxxxxxxx
+    
+    Returns: (project_id, secret)
+    Raises: HTTPException if invalid format
+    """
+    if not api_key or not api_key.startswith("proj_"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key format. Expected: proj_{project_id}_{secret}",
+        )
+    
+    # Format: proj_{project_id}_{secret}
+    parts = api_key.split("_", 2)  # Split into max 3 parts
+    if len(parts) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key format. Expected: proj_{project_id}_{secret}",
+        )
+    
+    project_id = parts[1]
+    secret = parts[2] if len(parts) > 2 else ""
+    
+    if not project_id or len(project_id) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid project ID in API key",
+        )
+    
+    # TODO: Validate secret against stored API keys in database
+    
+    return project_id, secret
+

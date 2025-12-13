@@ -5,10 +5,9 @@ from app.schemas.pipeline import (
     PipelineUpdate,
     PipelineResponse,
     PipelineListResponse,
-    EventCreate,
-    EventUpdate,
+    EventTypeConfigCreate,
+    EventTypeConfigUpdate,
     EventFieldSchema,
-    WebhookInfo,
 )
 from app.schemas.feature import (
     FeatureCreate,
@@ -56,10 +55,9 @@ __all__ = [
     "PipelineUpdate",
     "PipelineResponse",
     "PipelineListResponse",
-    "EventCreate",
-    "EventUpdate",
+    "EventTypeConfigCreate",
+    "EventTypeConfigUpdate",
     "EventFieldSchema",
-    "WebhookInfo",
     # Feature
     "FeatureCreate",
     "FeatureUpdate",

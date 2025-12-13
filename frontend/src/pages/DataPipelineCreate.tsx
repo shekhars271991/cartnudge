@@ -21,11 +21,13 @@ import {
     Users,
     Settings2,
     Zap,
+    AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProject } from "@/contexts/ProjectContext";
 import { EmptyProjectState } from "@/components/EmptyProjectState";
-import type { EventTopic, EventField, EventTypeConfig } from "@/lib/api/dataplatform/types";
+import { pipelinesApi } from "@/lib/api/dataplatform";
+import type { EventTopic, EventField, EventTypeConfig, EventPipelineCreate } from "@/lib/api/dataplatform/types";
 
 // ============================================================================
 // Static Event Topics Configuration (from backend event_topics.json)
@@ -482,6 +484,7 @@ export default function DataPipelineCreate() {
     // Wizard state
     const [step, setStep] = useState<WizardStep>("type");
     const [isSaving, setIsSaving] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
 
     // Pipeline data
     const [topicId, setTopicId] = useState("");
@@ -544,14 +547,37 @@ export default function DataPipelineCreate() {
     };
 
     const handleCreate = async () => {
+        if (!selectedProject) return;
+        
         setIsSaving(true);
+        setCreateError(null);
+        
         try {
-            // Simulated API call - in production, this would save to backend
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Build the create request
+            const createData: EventPipelineCreate = {
+                name: pipelineName,
+                display_name: pipelineDisplayName,
+                description: pipelineDescription || undefined,
+                topic_id: topicId,
+                event_configs: eventConfigs.map((ec) => ({
+                    event_type: ec.event_type,
+                    display_name: ec.display_name,
+                    description: ec.description,
+                    fields: ec.fields.map((f) => ({
+                        name: f.name,
+                        type: f.type,
+                        required: f.required,
+                        description: f.description,
+                    })),
+                })),
+            };
+
+            await pipelinesApi.create(selectedProject.id, createData);
             navigate("/data-pipelines");
-        } catch (err) {
+        } catch (err: unknown) {
             console.error("Failed to create pipeline:", err);
-            alert("Failed to create pipeline");
+            const errorMessage = err instanceof Error ? err.message : "Failed to create pipeline";
+            setCreateError(errorMessage);
         } finally {
             setIsSaving(false);
         }
@@ -837,14 +863,24 @@ export default function DataPipelineCreate() {
                             </div>
                         </div>
 
-                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                            <p className="text-sm text-emerald-800">
-                                <strong>Ready to create.</strong> Your pipeline will be created in inactive state. Activate it when you're
-                                ready to receive events.
-                            </p>
-                        </div>
-                    </div>
-                )}
+                                {createError && (
+                                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-medium text-red-800">Failed to create pipeline</p>
+                                            <p className="text-sm text-red-600 mt-1">{createError}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                    <p className="text-sm text-emerald-800">
+                                        <strong>Ready to create.</strong> Your pipeline will be created in inactive state. Activate it when you're
+                                        ready to receive events.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
             </div>
 
             {/* Footer Navigation */}

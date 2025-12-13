@@ -72,7 +72,7 @@ export default function Settings() {
   const [apiKeysLoading, setApiKeysLoading] = useState(false);
   const [showCreateKey, setShowCreateKey] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
-  const [newKey, setNewKey] = useState({ name: "", type: "secret" as "public" | "secret" });
+  const [newKey, setNewKey] = useState({ name: "", type: "secret" as "public" | "secret", projectId: "" });
   const [createdKey, setCreatedKey] = useState<ApiKeyCreated | null>(null);
   const [isCreatingKey, setIsCreatingKey] = useState(false);
   const [apiKeyError, setApiKeyError] = useState("");
@@ -129,20 +129,22 @@ export default function Settings() {
 
   // API Key handlers
   const handleCreateApiKey = async () => {
-    if (!newKey.name.trim() || !selectedProject) return;
+    if (!newKey.name.trim() || !newKey.projectId) return;
 
     setIsCreatingKey(true);
     setApiKeyError("");
 
     try {
-      const created = await apiKeysApi.create(selectedProject.id, {
+      const created = await apiKeysApi.create(newKey.projectId, {
         name: newKey.name.trim(),
         key_type: newKey.type,
       });
       setCreatedKey(created);
-      // Reload API keys
-      const data = await apiKeysApi.list(selectedProject.id);
-      setApiKeys(data.items);
+      // Reload API keys if we're viewing the same project
+      if (selectedProject && selectedProject.id === newKey.projectId) {
+        const data = await apiKeysApi.list(selectedProject.id);
+        setApiKeys(data.items);
+      }
     } catch (err) {
       const axiosError = err as AxiosError<ApiError>;
       setApiKeyError(axiosError.response?.data?.detail || "Failed to create API key");
@@ -295,7 +297,10 @@ export default function Settings() {
                   : "Select a project to manage API keys"}
               </p>
             </div>
-            <Button onClick={() => setShowCreateKey(true)} disabled={!selectedProject}>
+            <Button onClick={() => {
+              setNewKey({ name: "", type: "secret", projectId: selectedProject?.id || "" });
+              setShowCreateKey(true);
+            }} disabled={projects.length === 0}>
               <Plus className="h-4 w-4 mr-2" />
               Create API Key
             </Button>
@@ -328,7 +333,10 @@ export default function Settings() {
               <Key className="h-12 w-12 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">No API keys yet</h3>
               <p className="text-sm text-slate-500 mb-4">Create an API key to integrate with CartNudge.</p>
-              <Button onClick={() => setShowCreateKey(true)}>
+              <Button onClick={() => {
+                setNewKey({ name: "", type: "secret", projectId: selectedProject?.id || "" });
+                setShowCreateKey(true);
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create API Key
               </Button>
@@ -588,7 +596,7 @@ export default function Settings() {
           setShowCreateKey(open);
           if (!open) {
             setCreatedKey(null);
-            setNewKey({ name: "", type: "secret" });
+            setNewKey({ name: "", type: "secret", projectId: "" });
             setApiKeyError("");
           }
         }}
@@ -612,7 +620,10 @@ export default function Settings() {
                   <Check className="h-5 w-5 text-emerald-600" />
                   <span className="font-medium text-emerald-900">Key created successfully!</span>
                 </div>
-                <div className="flex items-center gap-2 mt-3">
+                <p className="text-sm text-emerald-700 mb-3">
+                  For project: <strong>{projects.find(p => p.id === newKey.projectId)?.name}</strong>
+                </p>
+                <div className="flex items-center gap-2">
                   <code className="flex-1 bg-white px-3 py-2 rounded border text-sm font-mono break-all">
                     {createdKey.key}
                   </code>
@@ -637,6 +648,27 @@ export default function Settings() {
                   {apiKeyError}
                 </div>
               )}
+              <div>
+                <Label>Project</Label>
+                <Select
+                  value={newKey.projectId}
+                  onValueChange={(v) => setNewKey({ ...newKey, projectId: v })}
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 mt-1.5">
+                  The API key will be scoped to this project
+                </p>
+              </div>
               <div>
                 <Label>Key Name</Label>
                 <Input
@@ -679,7 +711,7 @@ export default function Settings() {
                 </Button>
                 <Button
                   onClick={handleCreateApiKey}
-                  disabled={!newKey.name.trim() || isCreatingKey}
+                  disabled={!newKey.name.trim() || !newKey.projectId || isCreatingKey}
                 >
                   {isCreatingKey ? (
                     <>

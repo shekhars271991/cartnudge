@@ -50,8 +50,8 @@ class ApiKeyService:
         if not await self._has_permission(project_id, user_id, ["owner", "admin"]):
             raise PermissionError("You don't have permission to create API keys")
         
-        # Generate key
-        full_key, prefix = generate_api_key()
+        # Generate key with project_id embedded
+        full_key, prefix = generate_api_key(project_id)
         
         now = datetime.utcnow()
         expires_at = None
@@ -105,10 +105,19 @@ class ApiKeyService:
     
     async def validate(self, api_key: str) -> dict | None:
         """Validate an API key and return its info if valid."""
-        if not api_key.startswith("cn_"):
+        # Support both old (cn_) and new (proj_) formats
+        if api_key.startswith("proj_"):
+            # New format: proj_{project_id}_{secret}
+            parts = api_key.split("_", 2)
+            if len(parts) < 3:
+                return None
+            project_id = parts[1]
+            prefix = f"proj_{project_id[:8]}"
+        elif api_key.startswith("cn_"):
+            # Legacy format
+            prefix = api_key[:11]
+        else:
             return None
-        
-        prefix = api_key[:11]
         
         # Find key by prefix
         key_doc = await self.db.api_keys.find_one({

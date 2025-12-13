@@ -37,9 +37,9 @@ async def create_indexes():
     """Create database indexes."""
     db = get_database()
     
-    # Pipelines indexes
-    await db.pipelines.create_index("project_id")
-    await db.pipelines.create_index([("project_id", 1), ("status", 1)])
+    # Pipelines indexes (collection is event_pipelines)
+    await db.event_pipelines.create_index("project_id")
+    await db.event_pipelines.create_index([("project_id", 1), ("is_active", 1)])
     
     # Features indexes
     await db.features.create_index("project_id")

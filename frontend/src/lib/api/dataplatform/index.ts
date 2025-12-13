@@ -7,6 +7,7 @@
 export { default as dataPlatformClient } from "./client";
 export { datablocksApi } from "./datablocks";
 export { deploymentsApi } from "./deployments";
+export { pipelinesApi } from "./pipelines";
 
 // Export types
 export type {
@@ -22,7 +23,16 @@ export type {
   DatablockCreate,
   DatablockUpdate,
   DatablockListResponse,
-  // Pipeline types
+  // Event Pipeline types
+  EventTopic,
+  EventTopicsConfig,
+  EventField,
+  EventTypeConfig,
+  EventPipeline,
+  EventPipelineCreate,
+  EventPipelineUpdate,
+  EventPipelineListResponse,
+  // Legacy Pipeline types (for backwards compatibility)
   Pipeline,
   PipelineEvent,
   PipelineCreate,

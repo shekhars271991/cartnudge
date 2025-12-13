@@ -63,10 +63,17 @@ def generate_password_reset_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def generate_api_key() -> tuple[str, str]:
-    """Generate an API key and return (full_key, prefix)."""
-    full_key = f"cn_{secrets.token_urlsafe(32)}"
-    prefix = full_key[:11]  # "cn_" + first 8 chars
+def generate_api_key(project_id: str) -> tuple[str, str]:
+    """
+    Generate an API key and return (full_key, prefix).
+    
+    Format: proj_{project_id}_{secret}
+    This allows the data platform to extract the project_id from the key.
+    """
+    secret = secrets.token_urlsafe(32)
+    full_key = f"proj_{project_id}_{secret}"
+    # Prefix includes proj_ + project_id (24 hex chars for MongoDB ObjectId)
+    prefix = f"proj_{project_id[:8]}"
     return full_key, prefix
 
 
