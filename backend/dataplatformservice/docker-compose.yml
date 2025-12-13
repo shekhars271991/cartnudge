@@ -253,6 +253,43 @@ services:
         max-file: "2"
 
   # ==========================================================================
+  # Training Data Generator - Generates ML training data daily
+  # Runs at end of day or can be triggered manually via API
+  # ==========================================================================
+  training-data-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dataplatform-training-data-generator
+    command: ["python", "-m", "runtime.jobs.training_data_generator", "--daily"]
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "8013:8013"  # Health check endpoint
+    environment:
+      # ClickHouse connection
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: cartnudge
+      CLICKHOUSE_PASSWORD: cartnudge_dev
+      CLICKHOUSE_DATABASE: events
+      # Job configuration
+      LABEL_WINDOW_HOURS: "24"
+      FEATURE_WINDOW_DAYS: "30"
+      BATCH_SIZE: "1000"
+      HEALTH_CHECK_PORT: "8013"
+      # Python settings
+      PYTHONUNBUFFERED: "1"
+    profiles:
+      - training  # Only run when explicitly requested
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  # ==========================================================================
   # Development Tools
   # ==========================================================================
   kafka-ui:
